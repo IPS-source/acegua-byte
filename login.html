@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Aceguá Byte</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .container { max-width: 420px; width: 100%; padding: 20px; }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 { color: #00d4ff; font-size: 28px; }
+        .logo p { color: #666; font-size: 14px; margin-top: 4px; }
+        .card { background: #141414; border: 1px solid #222; border-radius: 16px; padding: 30px; }
+        .card h2 { color: #fff; font-size: 20px; margin-bottom: 6px; }
+        .card .sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+        .campo { margin-bottom: 16px; }
+        .campo label { display: block; font-size: 13px; color: #888; margin-bottom: 5px; font-weight: 600; }
+        .campo input { width: 100%; padding: 12px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .campo input:focus { border-color: #00d4ff; }
+        .btn { width: 100%; padding: 14px; background: #00d4ff; color: #000; border: none; border-radius: 30px; font-weight: bold; font-size: 15px; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+        .btn:hover { background: #00a0cc; }
+        .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .erro { background: rgba(231,76,60,0.15); color: #e74c3c; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+        .erro.show { display: block; }
+        .link { text-align: center; margin-top: 20px; font-size: 13px; color: #666; }
+        .link a { color: #00d4ff; text-decoration: none; }
+        .link a:hover { text-decoration: underline; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #333; border-top-color: #00d4ff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>⚡ Aceguá Byte</h1>
+            <p>Sistema de Pedidos para Restaurantes</p>
+        </div>
+        <div class="card">
+            <h2>Entrar</h2>
+            <p class="sub">Acesse seu painel de pedidos</p>
+            <div class="erro" id="erro"></div>
+            <form id="form-login" onsubmit="return login(event)">
+                <div class="campo">
+                    <label>Email ou Slug</label>
+                    <input type="text" id="email" required placeholder="seu@email.com ou slug-do-restaurante" autocomplete="username">
+                </div>
+                <div class="campo">
+                    <label>Senha</label>
+                    <input type="password" id="senha" required placeholder="Sua senha" autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn" id="btn-submit">Entrar</button>
+            </form>
+            <div class="link">Não tem conta? <a href="/register">Cadastrar</a></div>
+        </div>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        firebase.initializeApp({ databaseURL: "https://ips-source-pedidos-default-rtdb.firebaseio.com/" });
+        const db = firebase.database();
+
+        async function hashSenha(senha) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(senha + '-aceguabyte-salt');
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function login(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            const erro = document.getElementById('erro');
+            erro.classList.remove('show');
+
+            const input = document.getElementById('email').value.trim().toLowerCase();
+            const senha = document.getElementById('senha').value;
+
+            if (!input || !senha) { showError('Preencha todos os campos'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Entrando...';
+
+            try {
+                const senhaHash = await hashSenha(senha);
+                let restData = null;
+                const isEmail = input.includes('@');
+
+                if (isEmail) {
+                    const emailSnap = await db.ref('restaurants').orderByChild('email').equalTo(input).once('value');
+                    if (emailSnap.exists()) {
+                        emailSnap.forEach(child => { restData = child.val(); });
+                    }
+                } else {
+                    const slugSnap = await db.ref('restaurants/' + input).once('value');
+                    if (slugSnap.exists()) {
+                        restData = slugSnap.val();
+                    } else {
+                        const emailSnap = await db.ref('restaurants').orderByChild('email').equalTo(input).once('value');
+                        if (emailSnap.exists()) {
+                            emailSnap.forEach(child => { restData = child.val(); });
+                        }
+                    }
+                }
+
+                if (!restData) { showError('Conta não encontrada'); btn.disabled = false; btn.textContent = 'Entrar'; return; }
+                if (restData.senha !== senhaHash) { showError('Senha incorreta'); btn.disabled = false; btn.textContent = 'Entrar'; return; }
+
+                const token = btoa(JSON.stringify({ slug: restData.slug, email: restData.email, time: Date.now() }));
+                localStorage.setItem('aceguabyte_token', token);
+                localStorage.setItem('aceguabyte_restaurant', JSON.stringify({ slug: restData.slug, nome: restData.nome, email: restData.email }));
+
+                window.location.href = '/dashboard/' + restData.slug;
+
+            } catch (err) {
+                showError('Erro: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('erro');
+            el.textContent = msg;
+            el.classList.add('show');
+        }
+    </script>
+</body>
+</html>

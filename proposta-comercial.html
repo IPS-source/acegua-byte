@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { margin: 25mm 20mm; size: A4; }
+        @media print {
+            html, body { margin: 0; padding: 0; }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #222; }
+
+        .pagina {
+            page-break-inside: avoid;
+            page-break-after: always;
+            padding: 40px 0;
+            text-align: center;
+            min-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .titulo-secao {
+            font-size: 20px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #222;
+            display: inline-block;
+        }
+
+        .sub-titulo { font-size: 13px; color: #888; margin-top: -10px; margin-bottom: 20px; }
+
+        p { font-size: 13px; line-height: 1.7; color: #555; max-width: 500px; margin: 0 auto 10px; text-align: center; }
+        .destaque { font-size: 15px; color: #222; font-weight: 600; }
+
+        /* CAPA */
+        .capa .logo { font-size: 40px; font-weight: bold; letter-spacing: 4px; color: #222; margin-bottom: 5px; }
+        .capa .sub { font-size: 13px; color: #999; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 40px; }
+        .capa .titulo-main { font-size: 24px; font-weight: 300; line-height: 1.5; max-width: 420px; margin-bottom: 30px; color: #333; }
+        .capa .titulo-main strong { font-weight: 700; }
+        .capa .linha { width: 50px; height: 2px; background: #222; margin-bottom: 30px; }
+        .capa .footer { font-size: 11px; color: #aaa; position: absolute; bottom: 30mm; }
+
+        /* STATS */
+        .stats-grid { display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap; max-width: 500px; }
+        .stat-box {
+            flex: 1;
+            min-width: 130px;
+            border: 1px solid #ddd;
+            padding: 18px 12px;
+            text-align: center;
+        }
+        .stat-box .num { font-size: 28px; font-weight: 700; color: #222; }
+        .stat-box .label { font-size: 11px; color: #888; margin-top: 4px; line-height: 1.4; }
+
+        /* FLUXO */
+        .fluxo { display: flex; gap: 10px; margin: 25px 0; justify-content: center; align-items: center; flex-wrap: wrap; max-width: 550px; }
+        .fluxo-item {
+            flex: 1;
+            min-width: 130px;
+            text-align: center;
+            padding: 20px 12px;
+            border: 1px solid #ddd;
+        }
+        .fluxo-item .icon { font-size: 28px; margin-bottom: 8px; }
+        .fluxo-item .title { font-size: 12px; font-weight: 700; color: #222; margin-bottom: 4px; }
+        .fluxo-item .desc { font-size: 10px; color: #888; line-height: 1.4; }
+        .fluxo-arrow { color: #222; font-size: 20px; font-weight: bold; }
+
+        /* PASSOS */
+        .passos-list { text-align: left; max-width: 480px; margin: 20px auto 0; }
+        .passo {
+            padding: 10px 0;
+            font-size: 13px;
+            color: #555;
+            border-left: 2px solid #ddd;
+            padding-left: 15px;
+            margin-bottom: 4px;
+        }
+        .passo strong { color: #222; }
+
+        /* BENEFICIOS */
+        .beneficios { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; max-width: 500px; }
+        .beneficio {
+            border: 1px solid #ddd;
+            padding: 15px 12px;
+            text-align: center;
+        }
+        .beneficio .icon { font-size: 20px; margin-bottom: 6px; }
+        .beneficio .title { font-size: 13px; font-weight: 700; color: #222; margin-bottom: 3px; }
+        .beneficio .desc { font-size: 11px; color: #888; line-height: 1.4; }
+
+        /* PRECOS */
+        .precos-grid { display: flex; gap: 20px; margin-top: 25px; justify-content: center; flex-wrap: wrap; max-width: 500px; }
+        .preco-card {
+            flex: 1;
+            min-width: 180px;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            text-align: center;
+        }
+        .preco-card.destaque { border: 2px solid #222; }
+        .preco-header {
+            padding: 18px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .preco-card.destaque .preco-header { border-bottom-color: #222; }
+        .preco-header .label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #888; }
+        .preco-header .valor { font-size: 36px; font-weight: 700; color: #222; margin-top: 5px; }
+        .preco-header .valor small { font-size: 13px; font-weight: 400; }
+        .preco-body { padding: 15px; }
+        .preco-body ul { list-style: none; text-align: left; }
+        .preco-body li {
+            padding: 6px 0;
+            font-size: 12px;
+            color: #555;
+            border-bottom: 1px solid #eee;
+        }
+        .preco-body li:last-child { border-bottom: none; }
+        .preco-body .check { color: #222; font-weight: bold; margin-right: 5px; }
+
+        /* CTA */
+        .cta .titulo { font-size: 22px; font-weight: 700; color: #222; margin-bottom: 8px; }
+        .cta .sub { font-size: 13px; color: #888; margin-bottom: 25px; }
+        .cta .contato { font-size: 18px; font-weight: 700; color: #222; }
+        .cta .nota { font-size: 11px; color: #aaa; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- CAPA -->
+    <div class="pagina capa">
+        <div class="logo">ACEGUÁ BYTE</div>
+        <div class="sub">Tecnologia para seu restaurante</div>
+        <div class="titulo-main">
+            Automatize seus pedidos pelo <strong>WhatsApp</strong> e pare de perder vendas
+        </div>
+        <div class="linha"></div>
+        <div class="footer">Proposta comercial — Aceguá, RS — 2025</div>
+    </div>
+
+    <!-- PROBLEMA -->
+    <div class="pagina">
+        <div class="titulo-secao">O Problema</div>
+        <p class="sub-titulo">O que acontece quando o atendimento é manual</p>
+        <p class="destaque">Seu restaurante perde vendas todos os dias por causa do atendimento manual no WhatsApp.</p>
+        <p>Quando o cliente manda uma mensagem e demora para ser atendido, ele desiste e pede no concorrente. Quando o atendimento é no boca a boca, acontecem erros no pedido, gerando retrabalho e insatisfação.</p>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="num">47%</div>
+                <div class="label">dos clientes desistem se não forem respondidos em 5 min</div>
+            </div>
+            <div class="stat-box">
+                <div class="num">3x</div>
+                <div class="label">mais erros em pedidos anotados à mão vs. digitais</div>
+            </div>
+            <div class="stat-box">
+                <div class="num">20%</div>
+                <div class="label">de comissão média cobrada por apps de delivery</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOLUCAO -->
+    <div class="pagina">
+        <div class="titulo-secao">A Solução</div>
+        <p class="sub-titulo">Do pedido à cozinha, tudo automático</p>
+        <p class="destaque">Um sistema completo que automatiza seu atendimento no WhatsApp — sem erros, sem demora, sem comissão.</p>
+        <div class="fluxo">
+            <div class="fluxo-item">
+                <div class="icon">📱</div>
+                <div class="title">Cardápio Digital</div>
+                <div class="desc">Cliente acessa pelo celular, escolhe e finaliza</div>
+            </div>
+            <div class="fluxo-arrow">→</div>
+            <div class="fluxo-item">
+                <div class="icon">🤖</div>
+                <div class="title">Bot WhatsApp</div>
+                <div class="desc">Recebe e confirma o pedido automaticamente</div>
+            </div>
+            <div class="fluxo-arrow">→</div>
+            <div class="fluxo-item">
+                <div class="icon">👨‍🍳</div>
+                <div class="title">Painel Cozinha</div>
+                <div class="desc">Cozinha recebe tudo em tempo real</div>
+            </div>
+        </div>
+        <p>O cliente acompanha em tempo real: quando entra na cozinha, quando está pronto e quando sai para entrega.</p>
+    </div>
+
+    <!-- COMO FUNCIONA -->
+    <div class="pagina">
+        <div class="titulo-secao">Como Funciona na Prática</div>
+        <p class="sub-titulo">Passo a passo de um pedido real</p>
+        <div class="passos-list">
+            <div class="passo"><strong>1.</strong> Cliente acessa o cardápio digital pelo link ou QR Code na mesa</div>
+            <div class="passo"><strong>2.</strong> Escolhe os itens, adiciona ao carrinho e finaliza</div>
+            <div class="passo"><strong>3.</strong> O bot pergunta: Delivery ou Retirada no Local?</div>
+            <div class="passo"><strong>4.</strong> Pergunta forma de pagamento: Efectivo, Tarjeta ou PIX</div>
+            <div class="passo"><strong>5.</strong> Se PIX, envia a chave automaticamente</div>
+            <div class="passo"><strong>6.</strong> Pedido aparece no painel da cozinha em tempo real</div>
+            <div class="passo"><strong>7.</strong> Cozinha inicia preparo → cliente recebe aviso automático</div>
+            <div class="passo"><strong>8.</strong> Pedido finalizado → cliente recebe aviso de entrega</div>
+        </div>
+    </div>
+
+    <!-- VANTAGENS -->
+    <div class="pagina">
+        <div class="titulo-secao">Vantagens</div>
+        <p class="sub-titulo">Por que escolher a Aceguá Byte</p>
+        <div class="beneficios">
+            <div class="beneficio">
+                <div class="icon">🚫</div>
+                <div class="title">Zero Comissão</div>
+                <div class="desc">Sem taxa por pedido. Todo lucro é seu.</div>
+            </div>
+            <div class="beneficio">
+                <div class="icon">📡</div>
+                <div class="title">Tempo Real</div>
+                <div class="desc">Pedidos na cozinha instantaneamente.</div>
+            </div>
+            <div class="beneficio">
+                <div class="icon">🤝</div>
+                <div class="title">Suporte Presencial</div>
+                <div class="desc">Estamos na cidade. Vamos até você.</div>
+            </div>
+            <div class="beneficio">
+                <div class="icon">🔑</div>
+                <div class="title">Chave na Mão</div>
+                <div class="desc">Configuramos tudo. Você só usa.</div>
+            </div>
+            <div class="beneficio">
+                <div class="icon">💳</div>
+                <div class="title">PIX Automático</div>
+                <div class="desc">Chave enviada automaticamente.</div>
+            </div>
+            <div class="beneficio">
+                <div class="icon">📊</div>
+                <div class="title">Controle Total</div>
+                <div class="desc">Painel com pedidos e histórico.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRECOS -->
+    <div class="pagina">
+        <div class="titulo-secao">Investimento</div>
+        <p class="sub-titulo">Sem surpresas. Sem taxas escondidas.</p>
+        <div class="precos-grid">
+            <div class="preco-card destaque">
+                <div class="preco-header">
+                    <div class="label">Implementação</div>
+                    <div class="valor">R$ 500</div>
+                </div>
+                <div class="preco-body">
+                    <ul>
+                        <li><span class="check">✓</span> Configuração completa</li>
+                        <li><span class="check">✓</span> Carga do cardápio com fotos</li>
+                        <li><span class="check">✓</span> QR Code para mesas</li>
+                        <li><span class="check">✓</span> Bot WhatsApp configurado</li>
+                        <li><span class="check">✓</span> Painel de cozinha instalado</li>
+                        <li><span class="check">✓</span> Treinamento da equipe</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="preco-card">
+                <div class="preco-header">
+                    <div class="label">Mensalidade</div>
+                    <div class="valor">R$ 550<small>/mês</small></div>
+                </div>
+                <div class="preco-body">
+                    <ul>
+                        <li><span class="check">✓</span> Manutenção do servidor</li>
+                        <li><span class="check">✓</span> Suporte presencial</li>
+                        <li><span class="check">✓</span> Atualizações do sistema</li>
+                        <li><span class="check">✓</span> Alterações no cardápio</li>
+                        <li><span class="check">✓</span> Relatórios de vendas</li>
+                        <li><span class="check">✓</span> Sem taxa por pedido</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="pagina cta">
+        <div class="titulo">Comece a vender mais hoje</div>
+        <div class="sub">Configuração completa em até 48 horas. Sem burocracia.</div>
+        <div class="linha" style="width:40px;height:2px;background:#222;margin:0 auto 20px;"></div>
+        <div class="contato">ACEGUÁ BYTE</div>
+        <div class="nota">Tecnologia local para restaurantes locais</div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "meu-anota-ai-clone",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "bot": "node index.js",
+    "start:rest": "set REST_SLUG=slug & node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "firebase": "^8.10.1",
+    "firebase-admin": "^13.8.0",
+    "puppeteer": "^24.42.0",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  }
+}

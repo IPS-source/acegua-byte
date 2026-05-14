@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Cozinha | Aceguá Byte</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; text-align: center; padding: 20px; min-height: 100vh; }
+        h1 { color: #00d4ff; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .selector { max-width: 400px; margin: 0 auto 20px; }
+        .selector select { width: 100%; padding: 12px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; outline: none; cursor: pointer; }
+        .selector select:focus { border-color: #00d4ff; }
+        .status-bar { padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; background: #1a1a1a; color: #888; }
+        .stats { display: flex; gap: 15px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap; }
+        .stat-card { background: #1a1a1a; border-radius: 10px; padding: 15px 25px; min-width: 120px; }
+        .stat-card .num { font-size: 28px; font-weight: bold; }
+        .stat-card .label { font-size: 12px; color: #888; margin-top: 4px; }
+        .stat-pendente .num { color: #e74c3c; }
+        .stat-cocina .num { color: #f1c40f; }
+        .stat-finalizado .num { color: #2ecc71; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; text-align: left; max-width: 1200px; margin: 0 auto; }
+        .card { background: #1a1a1a; padding: 20px; border-radius: 12px; border-left: 6px solid #2ecc71; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); }
+        .card.pendiente { border-left-color: #e74c3c; }
+        .card.en-cocina { border-left-color: #f1c40f; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .card-id { font-size: 12px; color: #555; }
+        .card-time { font-size: 12px; color: #00d4ff; }
+        .card-rest { font-size: 12px; color: #00d4ff; font-weight: bold; }
+        .card-cliente { font-size: 14px; color: #aaa; margin-bottom: 10px; }
+        .card-content { background: #222; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 14px; line-height: 1.6; white-space: pre-line; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .badge-pendiente { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .badge-cocina { background: rgba(241,196,15,0.2); color: #f1c40f; }
+        .badge-finalizado { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .btn { border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; margin-bottom: 6px; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.85; }
+        .btn-cocina { background: #f1c40f; color: #000; }
+        .btn-finalizar { background: #2ecc71; color: #000; }
+        .btn-eliminar { background: #333; color: #888; font-size: 12px; padding: 8px; }
+        .empty { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #444; }
+        .empty .icon { font-size: 48px; margin-bottom: 10px; }
+        #log { margin-top: 40px; max-height: 100px; overflow-y: auto; padding: 12px; font-size: 11px; color: #555; text-align: left; font-family: monospace; background: #111; border-radius: 8px; }
+        #log span { color: #00d4ff; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Painel Cozinha</h1>
+    <p class="subtitle">Aceguá Byte — Multi-Restaurante</p>
+
+    <div class="selector">
+        <select id="rest-select" onchange="mudarRestaurante(this.value)">
+            <option value="">— Selecione um restaurante —</option>
+        </select>
+    </div>
+
+    <div id="status-bar" class="status-bar">Conectando ao Firebase...</div>
+
+    <div class="stats" id="stats" style="display:none;">
+        <div class="stat-card stat-pendente"><div class="num" id="count-pendiente">0</div><div class="label">Pendentes</div></div>
+        <div class="stat-card stat-cocina"><div class="num" id="count-cocina">0</div><div class="label">Em Preparo</div></div>
+        <div class="stat-card stat-finalizado"><div class="num" id="count-finalizado">0</div><div class="label">Finalizados</div></div>
+    </div>
+
+    <div id="lista" class="grid">
+        <div class="empty"><div class="icon">📋</div><p>Selecione um restaurante</p></div>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+        const DB_URL = 'https://ips-source-pedidos-default-rtdb.firebaseio.com/';
+        firebase.initializeApp({ databaseURL: DB_URL });
+        const db = firebase.database();
+        let restAtual = '';
+        let listenerAtivo = null;
+
+        function addLog(msg) {
+            const log = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('pt-BR');
+            log.innerHTML = `<span>[${time}]</span> ${msg}<br>` + log.innerHTML;
+        }
+
+        // Carregar lista de restaurantes
+        db.ref('restaurants').on('value', (snap) => {
+            const select = document.getElementById('rest-select');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">— Selecione um restaurante —</option>';
+            if (snap.exists()) {
+                snap.forEach(child => {
+                    const rest = child.val();
+                    const opt = document.createElement('option');
+                    opt.value = child.key;
+                    opt.textContent = rest.nome + ' (' + child.key + ')';
+                    select.appendChild(opt);
+                });
+            }
+            if (currentVal) select.value = currentVal;
+            if (!currentVal && select.options.length > 1) {
+                select.value = select.options[1].value;
+                mudarRestaurante(select.value);
+            }
+            document.getElementById('status-bar').innerHTML = '✅ Conectado — ' + (snap.exists() ? (select.options.length - 1) + ' restaurantes' : 'nenhum restaurante') + ' cadastrados';
+            document.getElementById('status-bar').style.background = snap.exists() ? '#0d2818' : '#1a1a1a';
+            document.getElementById('status-bar').style.color = snap.exists() ? '#2ecc71' : '#888';
+        });
+
+        function mudarRestaurante(slug) {
+            if (listenerAtivo) { listenerAtivo.off(); listenerAtivo = null; }
+            restAtual = slug;
+            if (!slug) {
+                document.getElementById('lista').innerHTML = '<div class="empty"><div class="icon">📋</div><p>Selecione um restaurante</p></div>';
+                document.getElementById('stats').style.display = 'none';
+                document.getElementById('status-bar').textContent = '⏸️ Nenhum restaurante selecionado';
+                return;
+            }
+            document.getElementById('stats').style.display = 'flex';
+            document.getElementById('status-bar').textContent = '👂 Ouvindo pedidos de: ' + slug;
+            addLog('Mudou para: ' + slug);
+
+            listenerAtivo = db.ref('restaurants/' + slug + '/pedidos');
+            listenerAtivo.on('value', (snap) => {
+                const lista = document.getElementById('lista');
+                let pendente = 0, cocina = 0, finalizado = 0;
+
+                if (!snap.exists()) {
+                    lista.innerHTML = '<div class="empty"><div class="icon">📋</div><p>Nenhum pedido ainda</p></div>';
+                    updateCounts(0, 0, 0);
+                    return;
+                }
+
+                let cards = [];
+                snap.forEach((child) => {
+                    const p = child.val();
+                    const id = child.key;
+                    if (!p) return;
+
+                    if (p.status === 'En Cocina') cocina++;
+                    else if (p.status === 'Finalizado') finalizado++;
+                    else pendente++;
+
+                    const statusClass = p.status === 'Pendiente' ? 'pendiente' : p.status === 'En Cocina' ? 'en-cocina' : '';
+                    const badgeClass = p.status === 'Pendiente' ? 'badge-pendiente' : p.status === 'En Cocina' ? 'badge-cocina' : 'badge-finalizado';
+                    const badgeText = p.status === 'Pendiente' ? '⏳ Pendente' : p.status === 'En Cocina' ? '🔥 Em Preparo' : '✅ Finalizado';
+
+                    let infoExtra = '';
+                    if (p.entrega && p.entrega !== 'Pendiente') {
+                        const entregaIcon = p.entrega === 'Delivery' ? '🛵' : '🏪';
+                        const pagoIcon = p.pago === 'Efectivo' ? '💵' : p.pago === 'Tarjeta' ? '💳' : p.pago === 'PIX' ? '📱' : '';
+                        const trocoColor = (p.troco && p.troco.includes('Sí')) ? '#f1c40f' : p.troco === 'No (monto exacto)' ? '#2ecc71' : '#555';
+                        const trocoBg = (p.troco && p.troco.includes('Sí')) ? 'rgba(241,196,15,0.15)' : p.troco === 'No (monto exacto)' ? 'rgba(46,204,113,0.15)' : 'rgba(85,85,85,0.3)';
+                        infoExtra = `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                            <div style="flex:1;min-width:100px;background:#222;border-radius:8px;padding:8px 10px;text-align:center;"><div style="font-size:18px;">${entregaIcon}</div><div style="font-size:11px;color:#aaa;margin-top:2px;">${p.entrega}</div></div>
+                            <div style="flex:1;min-width:100px;background:#222;border-radius:8px;padding:8px 10px;text-align:center;"><div style="font-size:18px;">${pagoIcon}</div><div style="font-size:11px;color:#aaa;margin-top:2px;">${p.pago || '—'}</div></div>
+                            <div style="flex:1;min-width:100px;background:${trocoBg};border-radius:8px;padding:8px 10px;text-align:center;"><div style="font-size:18px;">💵</div><div style="font-size:11px;color:${trocoColor};margin-top:2px;">${p.troco || '—'}</div></div>
+                        </div>`;
+                    }
+
+                    let buttons = '';
+                    if (p.status === 'Pendiente') {
+                        buttons = `<button class="btn btn-cocina" onclick="cocinar('${id}')">👨‍🍳 Iniciar Preparo</button>`;
+                    } else if (p.status === 'En Cocina') {
+                        buttons = `<button class="btn btn-finalizar" onclick="despachar('${id}')">🚀 Despachar / Finalizar</button>`;
+                    }
+                    buttons += `<button class="btn btn-eliminar" onclick="eliminar('${id}')">🗑️ Remover</button>`;
+
+                    cards.push(`<div class="card ${statusClass}">
+                        <div class="card-header">
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            <span class="card-id">#${id.slice(-6)}</span>
+                        </div>
+                        <div class="card-cliente">📱 ${p.cliente || 'N/A'}</div>
+                        ${infoExtra}
+                        <div class="card-content">${(p.contenido || '').replace(/\n/g, '<br>')}</div>
+                        ${buttons}
+                    </div>`);
+                });
+
+                lista.innerHTML = cards.reverse().join('');
+                updateCounts(pendente, cocina, finalizado);
+            });
+        }
+
+        function updateCounts(p, c, f) {
+            document.getElementById('count-pendiente').textContent = p;
+            document.getElementById('count-cocina').textContent = c;
+            document.getElementById('count-finalizado').textContent = f;
+        }
+
+        function cocinar(id) {
+            db.ref('restaurants/' + restAtual + '/pedidos/' + id).update({ status: "En Cocina" })
+                .then(() => addLog('Pedido #' + id.slice(-6) + ' → Em Preparo'))
+                .catch(e => addLog('ERRO: ' + e.message));
+        }
+
+        function despachar(id) {
+            if (!confirm("Finalizar pedido? O bot enviará aviso ao cliente via WhatsApp.")) return;
+            addLog('Pedido #' + id.slice(-6) + ' → Finalizando...');
+            db.ref('restaurants/' + restAtual + '/pedidos/' + id).update({ status: "Finalizado" })
+                .then(() => {
+                    addLog('Status "Finalizado" enviado');
+                    setTimeout(() => {
+                        db.ref('restaurants/' + restAtual + '/pedidos/' + id).remove()
+                            .then(() => addLog('Pedido #' + id.slice(-6) + ' removido'))
+                            .catch(e => addLog('ERRO: ' + e.message));
+                    }, 4000);
+                }).catch(e => addLog('ERRO: ' + e.message));
+        }
+
+        function eliminar(id) {
+            if (!confirm("Remover pedido permanentemente?")) return;
+            db.ref('restaurants/' + restAtual + '/pedidos/' + id).remove()
+                .then(() => addLog('Pedido #' + id.slice(-6) + ' removido'));
+        }
+
+        addLog('Painel carregado');
+    </script>
+</body>
+</html>

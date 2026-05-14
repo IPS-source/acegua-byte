@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Aceguá Byte</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; }
+        nav { background: #111; border-bottom: 1px solid #222; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+        nav .logo { color: #00d4ff; font-weight: bold; font-size: 18px; }
+        nav .logo span { color: #666; font-weight: normal; font-size: 13px; margin-left: 8px; }
+        nav .user-info { display: flex; align-items: center; gap: 15px; font-size: 13px; color: #888; }
+        nav .user-info .nome { color: #e0e0e0; }
+        .btn-sair { background: #222; border: 1px solid #444; color: #ccc; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .btn-sair:hover { background: #333; }
+        .tabs { display: flex; background: #111; border-bottom: 1px solid #222; overflow-x: auto; }
+        .tab { padding: 14px 24px; cursor: pointer; font-size: 14px; color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+        .tab:hover { color: #aaa; background: #1a1a1a; }
+        .tab.active { color: #00d4ff; border-bottom-color: #00d4ff; }
+        .content { max-width: 1000px; margin: 0 auto; padding: 25px 20px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        h2 { font-size: 20px; margin-bottom: 20px; color: #fff; }
+        .stats { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .stat-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 18px 24px; flex: 1; min-width: 120px; text-align: center; }
+        .stat-card .num { font-size: 28px; font-weight: bold; }
+        .stat-card .label { font-size: 12px; color: #888; margin-top: 4px; }
+        .stat-pendente .num { color: #e74c3c; }
+        .stat-cocina .num { color: #f1c40f; }
+        .stat-finalizado .num { color: #2ecc71; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #444; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 10px; }
+        .order-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #2ecc71; }
+        .order-card.pendiente { border-left-color: #e74c3c; }
+        .order-card.cocina { border-left-color: #f1c40f; }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #555; }
+        .order-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .order-badge.pendiente { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .order-badge.cocina { background: rgba(241,196,15,0.2); color: #f1c40f; }
+        .order-badge.finalizado { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .order-content { background: #1a1a1a; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.6; white-space: pre-line; margin: 8px 0; }
+        .order-meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+        .order-meta .tag { background: #222; padding: 4px 10px; border-radius: 6px; color: #aaa; }
+        .order-btn { border: none; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; margin-top: 8px; transition: opacity 0.2s; }
+        .order-btn:hover { opacity: 0.85; }
+        .order-btn.cocina { background: #f1c40f; color: #000; }
+        .order-btn.finalizar { background: #2ecc71; color: #000; }
+        .order-btn.remover { background: #333; color: #888; font-size: 11px; padding: 6px; margin-top: 4px; }
+
+        .cardapio-grid { display: grid; gap: 20px; }
+        .categoria-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 16px; }
+        .categoria-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .categoria-header h3 { color: #00d4ff; font-size: 16px; }
+        .categoria-actions { display: flex; gap: 6px; }
+        .btn-sm { background: #222; border: 1px solid #444; color: #ccc; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; }
+        .btn-sm:hover { background: #333; }
+        .btn-sm.danger { border-color: #5a1a1a; color: #e74c3c; }
+        .btn-sm.danger:hover { background: #2a0a0a; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #1a1a1a; border-radius: 8px; margin-bottom: 6px; }
+        .item-info { font-size: 13px; }
+        .item-info .preco { color: #00d4ff; font-weight: bold; }
+        .item-info .desc { color: #666; font-size: 11px; }
+        .item-actions { display: flex; gap: 6px; }
+        .form-inline { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .form-inline input, .form-inline select { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 13px; flex: 1; min-width: 100px; outline: none; }
+        .form-inline input:focus { border-color: #00d4ff; }
+        .form-inline .btn-add-item { background: #00d4ff; color: #000; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .form-inline .btn-add-item:hover { background: #00a0cc; }
+
+        .btn-add-cat { background: #00d4ff; color: #000; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
+        .btn-add-cat:hover { background: #00a0cc; }
+
+        .qr-section { text-align: center; padding: 20px; }
+        .qr-section canvas, .qr-section img { background: white; padding: 12px; border-radius: 12px; }
+        .qr-link { color: #00d4ff; font-size: 16px; margin: 15px 0; word-break: break-all; }
+        .btn-copiar { background: #222; border: 1px solid #444; color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px; }
+        .btn-copiar:hover { background: #333; }
+
+        .settings-form { max-width: 500px; }
+        .settings-form .campo { margin-bottom: 16px; }
+        .settings-form label { display: block; font-size: 13px; color: #888; margin-bottom: 5px; font-weight: 600; }
+        .settings-form input { width: 100%; padding: 12px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; outline: none; }
+        .settings-form input:focus { border-color: #00d4ff; }
+        .settings-form .btn { background: #00d4ff; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .settings-form .btn:hover { background: #00a0cc; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: #000; padding: 10px 24px; border-radius: 30px; font-size: 13px; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
+        .toast.show { opacity: 1; }
+        .toast.erro { background: #e74c3c; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">⚡ Aceguá Byte <span id="rest-nome"></span></div>
+        <div class="user-info">
+            <span class="nome" id="user-nome"></span>
+            <button class="btn-sair" onclick="sair()">Sair</button>
+        </div>
+    </nav>
+
+    <div class="tabs" id="tabs">
+        <div class="tab active" data-tab="pedidos" onclick="switchTab('pedidos')">📋 Pedidos</div>
+        <div class="tab" data-tab="cardapio" onclick="switchTab('cardapio')">🍽️ Cardápio</div>
+        <div class="tab" data-tab="qr" onclick="switchTab('qr')">📱 QR Code</div>
+        <div class="tab" data-tab="config" onclick="switchTab('config')">⚙️ Config</div>
+    </div>
+
+    <div class="content">
+        <div class="page active" id="page-pedidos">
+            <h2>📋 Pedidos</h2>
+            <div class="stats">
+                <div class="stat-card stat-pendente"><div class="num" id="count-pendente">0</div><div class="label">Pendentes</div></div>
+                <div class="stat-card stat-cocina"><div class="num" id="count-cocina">0</div><div class="label">Em Preparo</div></div>
+                <div class="stat-card stat-finalizado"><div class="num" id="count-finalizado">0</div><div class="label">Finalizados</div></div>
+            </div>
+            <div id="orders-list"></div>
+        </div>
+
+        <div class="page" id="page-cardapio">
+            <h2>🍽️ Gerenciar Cardápio</h2>
+            <button class="btn-add-cat" onclick="addCategoria()">+ Nova Categoria</button>
+            <div id="cardapio-grid" class="cardapio-grid"></div>
+        </div>
+
+        <div class="page" id="page-qr">
+            <h2>📱 QR Code do Cardápio</h2>
+            <div class="qr-section">
+                <div id="qrcode-container"></div>
+                <div class="qr-link" id="qr-link"></div>
+                <p style="color:#666;font-size:13px;margin:10px 0;">Imprima e cole na mesa do restaurante</p>
+                <button class="btn-copiar" onclick="copiarLink()">📋 Copiar Link</button>
+                <button class="btn-copiar" style="margin-left:8px;" onclick="baixarQR()">⬇️ Baixar QR Code</button>
+            </div>
+        </div>
+
+        <div class="page" id="page-config">
+            <h2>⚙️ Configurações</h2>
+            <div class="settings-form">
+                <div class="campo">
+                    <label>Nome do Restaurante</label>
+                    <input type="text" id="cfg-nome">
+                </div>
+                <div class="campo">
+                    <label>WhatsApp do Restaurante</label>
+                    <input type="text" id="cfg-whatsapp" placeholder="Ex: 555399288344">
+                    <div class="hint" style="font-size:11px;color:#555;margin-top:3px;">Número que aparece no cardápio como contato</div>
+                </div>
+                <div class="campo" style="border:1px solid #333;border-radius:8px;padding:14px;background:#111;">
+                    <label>🤖 Número do Bot Central (Aceguá Byte)</label>
+                    <input type="text" id="cfg-botnumber" placeholder="Ex: 555399288344">
+                    <div class="hint" style="font-size:11px;color:#888;margin-top:3px;">Se preenchido, o cardápio envia os pedidos para este número (o bot processa automaticamente). Deixe vazio para enviar direto pro WhatsApp do restaurante.</div>
+                </div>
+                <div class="campo">
+                    <label>Telefone</label>
+                    <input type="text" id="cfg-telefone">
+                </div>
+                <div class="campo">
+                    <label>Endereço</label>
+                    <input type="text" id="cfg-endereco">
+                </div>
+                <button class="btn" onclick="salvarConfig()">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const SALT = '-aceguabyte-salt';
+        const DB_URL = 'https://ips-source-pedidos-default-rtdb.firebaseio.com/';
+        firebase.initializeApp({ databaseURL: DB_URL });
+        const db = firebase.database();
+
+        let restSlug = null;
+        let restData = null;
+
+        function toast(msg, erro) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast' + (erro ? ' erro' : '') + ' show';
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function sair() {
+            localStorage.removeItem('aceguabyte_token');
+            localStorage.removeItem('aceguabyte_restaurant');
+            window.location.href = '/login';
+        }
+
+        function checkAuth() {
+            const stored = localStorage.getItem('aceguabyte_restaurant');
+            if (!stored) { window.location.href = '/login'; return null; }
+            try {
+                const data = JSON.parse(stored);
+                document.getElementById('user-nome').textContent = data.nome;
+                document.getElementById('rest-nome').textContent = '/' + data.slug;
+                restSlug = data.slug;
+                return data;
+            } catch (e) { window.location.href = '/login'; return null; }
+        }
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelector('.tab[data-tab="' + name + '"]').classList.add('active');
+            document.getElementById('page-' + name).classList.add('active');
+        }
+
+        checkAuth();
+        if (!restSlug) throw new Error('No slug');
+
+        const restRef = db.ref('restaurants/' + restSlug);
+
+        restRef.child('pedidos').on('value', (snap) => {
+            const list = document.getElementById('orders-list');
+            let pCount = 0, cCount = 0, fCount = 0;
+
+            if (!snap.exists()) {
+                list.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Nenhum pedido ainda</p></div>';
+                updateCounts(0, 0, 0);
+                return;
+            }
+
+            let html = '';
+            snap.forEach(child => {
+                const ped = child.val();
+                const id = child.key;
+                if (ped.status === 'Pendiente') pCount++;
+                else if (ped.status === 'En Cocina') cCount++;
+                else if (ped.status === 'Finalizado') fCount++;
+
+                const statusClass = ped.status === 'Pendiente' ? 'pendiente' : ped.status === 'En Cocina' ? 'cocina' : '';
+                const badgeText = ped.status === 'Pendiente' ? '⏳ Pendente' : ped.status === 'En Cocina' ? '🔥 Em Preparo' : '✅ Finalizado';
+                const badgeClass = ped.status === 'Pendiente' ? 'pendiente' : ped.status === 'En Cocina' ? 'cocina' : 'finalizado';
+
+                let meta = '';
+                if (ped.entrega && ped.entrega !== 'Pendiente') {
+                    const entregaIcon = ped.entrega === 'Delivery' ? '🛵' : '🏪';
+                    const pagoIcon = ped.pago === 'Efectivo' ? '💵' : ped.pago === 'Tarjeta' ? '💳' : ped.pago === 'PIX' ? '📱' : '';
+                    meta = `<div class="order-meta">
+                        <span class="tag">${entregaIcon} ${ped.entrega}</span>
+                        <span class="tag">${pagoIcon} ${ped.pago || '—'}</span>
+                        ${ped.troco && ped.troco !== 'No aplica' ? `<span class="tag">💵 ${ped.troco}</span>` : ''}
+                        <span class="tag">📱 ${ped.cliente || ''}</span>
+                    </div>`;
+                }
+
+                let buttons = '';
+                if (ped.status === 'Pendiente') {
+                    buttons = `<button class="order-btn cocina" onclick="iniciarPreparo('${id}')">👨‍🍳 Iniciar Preparo</button>`;
+                } else if (ped.status === 'En Cocina') {
+                    buttons = `<button class="order-btn finalizar" onclick="finalizar('${id}')">🚀 Finalizar</button>`;
+                }
+                buttons += `<button class="order-btn remover" onclick="removerPedido('${id}')">🗑️ Remover</button>`;
+
+                html += `<div class="order-card ${statusClass}">
+                    <div class="order-header">
+                        <span class="order-badge ${badgeClass}">${badgeText}</span>
+                        <span>#${id.slice(-6)} • ${ped.fecha || ''}</span>
+                    </div>
+                    ${meta}
+                    <div class="order-content">${(ped.contenido || '').replace(/\n/g, '<br>')}</div>
+                    ${buttons}
+                </div>`;
+            });
+
+            list.innerHTML = html || '<div class="empty-state"><div class="icon">📋</div><p>Nenhum pedido</p></div>';
+            updateCounts(pCount, cCount, fCount);
+        });
+
+        function updateCounts(p, c, f) {
+            document.getElementById('count-pendente').textContent = p;
+            document.getElementById('count-cocina').textContent = c;
+            document.getElementById('count-finalizado').textContent = f;
+        }
+
+        function iniciarPreparo(id) {
+            db.ref('restaurants/' + restSlug + '/pedidos/' + id).update({ status: 'En Cocina' }).then(() => toast('Pedido em preparo'));
+        }
+
+        function finalizar(id) {
+            db.ref('restaurants/' + restSlug + '/pedidos/' + id).update({ status: 'Finalizado' }).then(() => toast('Pedido finalizado!'));
+        }
+
+        function removerPedido(id) {
+            if (!confirm('Remover pedido permanentemente?')) return;
+            db.ref('restaurants/' + restSlug + '/pedidos/' + id).remove().then(() => toast('Pedido removido'));
+        }
+
+        restRef.child('cardapio').on('value', (snap) => {
+            if (!snap.exists()) return;
+            renderCardapio(snap.val());
+        });
+
+        function renderCardapio(data) {
+            const grid = document.getElementById('cardapio-grid');
+            const categorias = data && data.categorias ? data.categorias : {};
+            const keys = Object.keys(categorias).sort((a, b) => (categorias[a].ordem || 999) - (categorias[b].ordem || 999));
+
+            if (keys.length === 0) {
+                grid.innerHTML = '<div class="empty-state"><p>Nenhuma categoria. Crie uma!</p></div>';
+                return;
+            }
+
+            grid.innerHTML = keys.map(catKey => {
+                const cat = categorias[catKey];
+                const itens = cat.itens || {};
+                const itemKeys = Object.keys(itens);
+
+                const itemsHtml = itemKeys.map(itemKey => {
+                    const item = itens[itemKey];
+                    return `<div class="item-row">
+                        <div class="item-info">
+                            <strong>${item.nome}</strong>
+                            <span class="preco">R$ ${Number(item.preco || 0).toFixed(2)}</span>
+                            ${item.desc ? `<div class="desc">${item.desc}</div>` : ''}
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn-sm danger" onclick="removerItem('${catKey}', '${itemKey}')">✕</button>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                return `<div class="categoria-card">
+                    <div class="categoria-header">
+                        <h3>${cat.nome}</h3>
+                        <div class="categoria-actions">
+                            <button class="btn-sm danger" onclick="removerCategoria('${catKey}')">Remover</button>
+                        </div>
+                    </div>
+                    ${itemsHtml}
+                    <div class="form-inline">
+                        <input type="text" id="item-nome-${catKey}" placeholder="Item" style="min-width:120px;">
+                        <input type="number" id="item-preco-${catKey}" placeholder="Preço" step="0.01" style="width:80px;">
+                        <input type="text" id="item-desc-${catKey}" placeholder="Descrição" style="min-width:120px;">
+                        <button class="btn-add-item" onclick="addItem('${catKey}')">+</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addCategoria() {
+            const nome = prompt('Nome da categoria:');
+            if (!nome || !nome.trim()) return;
+            const key = nome.trim().toLowerCase().replace(/[^a-z0-9áéíóúãõâêôçà-]/g, '').replace(/-+/g, '-') || 'cat-' + Date.now();
+            const catRef = db.ref('restaurants/' + restSlug + '/cardapio/categorias/' + key);
+            catRef.once('value').then(snap => {
+                if (snap.exists()) { toast('Categoria já existe', true); return; }
+                const ordemRef = db.ref('restaurants/' + restSlug + '/cardapio/categorias');
+                ordemRef.once('value').then(s => {
+                    const count = s.exists() ? Object.keys(s.val()).length : 0;
+                    catRef.set({ nome: nome.trim(), ordem: count + 1 }).then(() => toast('Categoria criada!'));
+                });
+            });
+        }
+
+        function removerCategoria(key) {
+            if (!confirm('Remover categoria e todos os itens?')) return;
+            db.ref('restaurants/' + restSlug + '/cardapio/categorias/' + key).remove().then(() => toast('Categoria removida'));
+        }
+
+        function addItem(catKey) {
+            const nome = document.getElementById('item-nome-' + catKey).value.trim();
+            const preco = parseFloat(document.getElementById('item-preco-' + catKey).value);
+            const desc = document.getElementById('item-desc-' + catKey).value.trim();
+
+            if (!nome || isNaN(preco)) { toast('Nome e preço são obrigatórios', true); return; }
+
+            const itemKey = nome.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
+            db.ref('restaurants/' + restSlug + '/cardapio/categorias/' + catKey + '/itens/' + itemKey)
+                .set({ nome, preco, desc })
+                .then(() => {
+                    document.getElementById('item-nome-' + catKey).value = '';
+                    document.getElementById('item-preco-' + catKey).value = '';
+                    document.getElementById('item-desc-' + catKey).value = '';
+                    toast('Item adicionado!');
+                });
+        }
+
+        function removerItem(catKey, itemKey) {
+            if (!confirm('Remover este item?')) return;
+            db.ref('restaurants/' + restSlug + '/cardapio/categorias/' + catKey + '/itens/' + itemKey).remove().then(() => toast('Item removido'));
+        }
+
+        restRef.once('value').then(snap => {
+            if (!snap.exists()) return;
+            restData = snap.val();
+            document.getElementById('cfg-nome').value = restData.nome || '';
+            document.getElementById('cfg-whatsapp').value = restData.whatsapp || '';
+            document.getElementById('cfg-telefone').value = restData.telefone || '';
+            document.getElementById('cfg-endereco').value = restData.endereco || '';
+
+            const menuLink = window.location.origin + '/cardapio/' + restSlug;
+            document.getElementById('qr-link').textContent = menuLink;
+            document.getElementById('qr-link').href = menuLink;
+            gerarQR(menuLink);
+        });
+
+        function gerarQR(text) {
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            container.appendChild(canvas);
+            const size = 220;
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            const qrData = text;
+            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(qrData);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, size, size);
+                ctx.drawImage(img, 0, 0, size, size);
+                canvas.dataset.url = qrUrl;
+            };
+            img.onerror = function() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, size, size);
+                ctx.fillStyle = '#000';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('QR Code', size/2, size/2 - 10);
+                ctx.fillStyle = '#00d4ff';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(text.substring(0, 30) + '...', size/2, size/2 + 15);
+            };
+            img.src = qrUrl;
+        }
+
+        function copiarLink() {
+            const link = document.getElementById('qr-link').textContent;
+            navigator.clipboard.writeText(link).then(() => toast('Link copiado!'));
+        }
+
+        function baixarQR() {
+            const canvas = document.querySelector('#qrcode-container canvas');
+            if (!canvas) return;
+            const link = document.createElement('a');
+            link.download = 'qrcode-' + restSlug + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            toast('QR Code baixado!');
+        }
+
+        restRef.once('value').then(snap => {
+            if (!snap.exists()) return;
+            restData = snap.val();
+            document.getElementById('cfg-nome').value = restData.nome || '';
+            document.getElementById('cfg-whatsapp').value = restData.whatsapp || '';
+            document.getElementById('cfg-botnumber').value = restData.centralBotNumber || '';
+            document.getElementById('cfg-telefone').value = restData.telefone || '';
+            document.getElementById('cfg-endereco').value = restData.endereco || '';
+
+            const menuLink = window.location.origin + '/cardapio/' + restSlug;
+            document.getElementById('qr-link').textContent = menuLink;
+            document.getElementById('qr-link').href = menuLink;
+            gerarQR(menuLink);
+        });
+
+        function salvarConfig() {
+            const data = {
+                nome: document.getElementById('cfg-nome').value.trim(),
+                whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
+                centralBotNumber: document.getElementById('cfg-botnumber').value.trim(),
+                telefone: document.getElementById('cfg-telefone').value.trim(),
+                endereco: document.getElementById('cfg-endereco').value.trim()
+            };
+            if (!data.nome) { toast('Nome é obrigatório', true); return; }
+            db.ref('restaurants/' + restSlug).update(data).then(() => {
+                const stored = JSON.parse(localStorage.getItem('aceguabyte_restaurant') || '{}');
+                stored.nome = data.nome;
+                localStorage.setItem('aceguabyte_restaurant', JSON.stringify(stored));
+                document.getElementById('user-nome').textContent = data.nome;
+                toast('Configurações salvas!');
+            });
+        }
+    </script>
+</body>
+</html>

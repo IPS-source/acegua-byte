@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aceguá Byte — Sistema de Pedidos WhatsApp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; }
+        nav { background: #111; border-bottom: 1px solid #222; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        nav .logo { color: #00d4ff; font-weight: bold; font-size: 20px; }
+        nav .links { display: flex; gap: 12px; }
+        nav .links a { color: #888; text-decoration: none; font-size: 14px; padding: 8px 16px; border-radius: 6px; transition: all 0.2s; }
+        nav .links a:hover { color: #fff; background: #1a1a1a; }
+        nav .links a.primary { background: #00d4ff; color: #000; font-weight: bold; }
+        nav .links a.primary:hover { background: #00a0cc; }
+        .hero { text-align: center; padding: 80px 24px 60px; max-width: 700px; margin: 0 auto; }
+        .hero h1 { font-size: 42px; color: #fff; margin-bottom: 16px; }
+        .hero h1 span { color: #00d4ff; }
+        .hero p { font-size: 18px; color: #888; line-height: 1.7; margin-bottom: 36px; }
+        .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+        .hero-buttons a { padding: 14px 32px; border-radius: 30px; font-weight: bold; font-size: 15px; text-decoration: none; transition: all 0.2s; }
+        .hero-buttons .btn-primary { background: #00d4ff; color: #000; }
+        .hero-buttons .btn-primary:hover { background: #00a0cc; transform: scale(1.03); }
+        .hero-buttons .btn-secondary { background: #1a1a1a; color: #e0e0e0; border: 1px solid #333; }
+        .hero-buttons .btn-secondary:hover { background: #222; }
+        .features { max-width: 900px; margin: 0 auto; padding: 40px 24px 60px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+        .feature { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 24px; text-align: center; transition: border-color 0.2s; }
+        .feature:hover { border-color: #00d4ff; }
+        .feature .icon { font-size: 36px; margin-bottom: 12px; }
+        .feature h3 { font-size: 16px; color: #fff; margin-bottom: 6px; }
+        .feature p { font-size: 13px; color: #666; line-height: 1.5; }
+        .steps { background: #111; padding: 60px 24px; text-align: center; }
+        .steps h2 { font-size: 28px; color: #fff; margin-bottom: 40px; }
+        .steps h2 span { color: #00d4ff; }
+        .step-list { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; text-align: left; }
+        .step { display: flex; gap: 16px; align-items: flex-start; }
+        .step-num { background: #00d4ff; color: #000; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; flex-shrink: 0; }
+        .step-text h4 { color: #fff; font-size: 16px; margin-bottom: 4px; }
+        .step-text p { color: #666; font-size: 14px; }
+        footer { text-align: center; padding: 30px; color: #444; font-size: 13px; }
+        footer a { color: #00d4ff; text-decoration: none; }
+        @media (max-width: 600px) { .hero h1 { font-size: 28px; } .hero p { font-size: 15px; } }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">⚡ Aceguá Byte</div>
+        <div class="links">
+            <a href="/login">Entrar</a>
+            <a href="/register" class="primary">Criar Conta</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>Seu restaurante no <span>WhatsApp</span></h1>
+        <p>Sistema de pedidos via WhatsApp para restaurantes e lanchonetes. Cardápio digital, gestão de pedidos em tempo real e painel de cozinha — sem taxa por pedido.</p>
+        <div class="hero-buttons">
+            <a href="/register" class="btn-primary">🚀 Cadastrar Restaurante</a>
+            <a href="/login" class="btn-secondary">🔑 Já tenho conta</a>
+        </div>
+    </div>
+
+    <div class="features">
+        <div class="feature"><div class="icon">📱</div><h3>Cardápio Digital</h3><p>Cada restaurante tem seu cardápio online com URL única. Cliente vê, adiciona ao carrinho e envia o pedido por WhatsApp.</p></div>
+        <div class="feature"><div class="icon">📋</div><h3>Gestão de Pedidos</h3><p>Dashboard em tempo real com todos os pedidos. Status: Pendente → Em Preparo → Finalizado. Notificação automática ao cliente.</p></div>
+        <div class="feature"><div class="icon">🏪</div><h3>Multi-Restaurante</h3><p>Sistema pronto para múltiplos restaurantes. Cada um com seu próprio painel, cardápio e configuração independente.</p></div>
+        <div class="feature"><div class="icon">📊</div><h3>Painel Cozinha</h3><p>Tela dedicada para a cozinha com contadores e pedidos em tempo real. Selecione o restaurante e acompanhe.</p></div>
+        <div class="feature"><div class="icon">📎</div><h3>QR Code</h3><p>Cada restaurante tem seu QR Code único para imprimir e colocar nas mesas. Cliente aponta, pede, pronto.</p></div>
+        <div class="feature"><div class="icon">💰</div><h3>Zero Taxa</h3><p>Sem comissão por pedido. Sem taxa de assinatura escondida. Apenas um valor fixo mensal.</p></div>
+    </div>
+
+    <div class="steps">
+        <h2>Como funciona em <span>3 passos</span></h2>
+        <div class="step-list">
+            <div class="step"><div class="step-num">1</div><div class="step-text"><h4>Cadastre seu restaurante</h4><p>Crie sua conta, configure seu cardápio e informe seu WhatsApp em menos de 2 minutos.</p></div></div>
+            <div class="step"><div class="step-num">2</div><div class="step-text"><h4>Compartilhe o cardápio</h4><p>Use o QR Code ou link único. O cliente vê o cardápio, monta o pedido e envia direto pro seu WhatsApp.</p></div></div>
+            <div class="step"><div class="step-num">3</div><div class="step-text"><h4>Receba e gerencie</h4><p>Pedidos aparecem no seu painel e WhatsApp. Acompanhe o status, inicie o preparo e finalize.</p></div></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>⚡ Aceguá Byte — Sistema de Pedidos via WhatsApp</p>
+        <p><a href="/register">Cadastre-se</a> · <a href="/login">Login</a></p>
+        <p style="margin-top:8px;">© 2026 Aceguá Byte</p>
+    </footer>
+</body>
+</html>
