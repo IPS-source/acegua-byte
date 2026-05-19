@@ -3,7 +3,19 @@ function formatMoney(v) {
 }
 
 function nomeCliente(chatId) {
-    return chatId.replace('@c.us', '').replace('@g.us', '');
+    return (chatId || '').replace(/@\w+\.?\w*$/, '');
+}
+
+async function obterNomeContato(client, chatId) {
+    try {
+        const contato = await client.getContactById(chatId);
+        if (contato) {
+            if (contato.pushname) return contato.pushname;
+            if (contato.name) return contato.name;
+            if (contato.shortName) return contato.shortName;
+        }
+    } catch (e) { /* nao encontrado */ }
+    return nomeCliente(chatId);
 }
 
 function agora() {
@@ -75,5 +87,5 @@ async function clienteHistorico(db, slug, chatId) {
 module.exports = {
     formatMoney, nomeCliente, agora, sanitizar,
     resumoItens, menuCategorias, menuItens,
-    salvarCliente, clienteHistorico
+    salvarCliente, clienteHistorico, obterNomeContato
 };

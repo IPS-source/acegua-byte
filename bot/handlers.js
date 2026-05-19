@@ -1,4 +1,4 @@
-const { formatMoney, nomeCliente, agora, sanitizar, resumoItens, menuCategorias, menuItens, salvarCliente, clienteHistorico } = require('./utils');
+const { formatMoney, nomeCliente, agora, sanitizar, resumoItens, menuCategorias, menuItens, salvarCliente, clienteHistorico, obterNomeContato } = require('./utils');
 const admin = require('firebase-admin');
 
 async function processarPedidoCardapio(texto, chatId, ctx) {
@@ -43,7 +43,7 @@ async function processarPedidoCardapio(texto, chatId, ctx) {
 
     const ref = db.ref('restaurants/' + slug + '/pedidos');
     const pedidoId = ref.push().key;
-    const clienteNome = nomeCliente(chatId);
+    const clienteNome = await obterNomeContato(client, chatId);
 
     const novoPedido = {
         clienteChat: chatId,
