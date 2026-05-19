@@ -232,6 +232,46 @@
             setTimeout(() => t.classList.remove('show'), 2500);
         }
 
+        function playNotificationSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 800;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.3);
+                setTimeout(() => {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.frequency.value = 1200;
+                    osc2.type = 'sine';
+                    gain2.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc2.start(ctx.currentTime);
+                    osc2.stop(ctx.currentTime + 0.3);
+                }, 150);
+            } catch (e) { /* silencioso */ }
+        }
+
+        function showDesktopNotification(title, body) {
+            try {
+                if (Notification.permission === 'granted') {
+                    new Notification(title, { body, icon: '/favicon.ico' });
+                }
+            } catch (e) { /* silencioso */ }
+        }
+
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
         function sair() {
             localStorage.removeItem('aceguabyte_token');
             localStorage.removeItem('aceguabyte_restaurant');
@@ -261,10 +301,12 @@
         if (!restSlug) throw new Error('No slug');
 
         const restRef = db.ref('restaurants/' + restSlug);
+        let knownOrders = {};
 
         restRef.child('pedidos').on('value', (snap) => {
             const list = document.getElementById('orders-list');
             let pCount = 0, cCount = 0, fCount = 0;
+            const currentIds = {};
 
             if (!snap.exists()) {
                 list.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Nenhum pedido ainda</p></div>';
@@ -276,7 +318,16 @@
             snap.forEach(child => {
                 const ped = child.val();
                 const id = child.key;
-                if (ped.status === 'Pendiente') pCount++;
+                currentIds[id] = true;
+                if (ped.status === 'Pendiente') {
+                    if (!knownOrders[id]) {
+                        setTimeout(() => {
+                            playNotificationSound();
+                            showDesktopNotification('🛵 Novo Pedido!', `R$ ${(ped.total || 0).toFixed(2).replace('.', ',')} — ${ped.cliente || ''}`);
+                        }, 100);
+                    }
+                    pCount++;
+                }
                 else if (ped.status === 'En Cocina') cCount++;
                 else if (ped.status === 'Finalizado') fCount++;
 
@@ -317,6 +368,7 @@
 
             list.innerHTML = html || '<div class="empty-state"><div class="icon">📋</div><p>Nenhum pedido</p></div>';
             updateCounts(pCount, cCount, fCount);
+            knownOrders = currentIds;
         });
 
         function updateCounts(p, c, f) {
