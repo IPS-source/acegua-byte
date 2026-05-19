@@ -156,6 +156,25 @@ async function handleMessage(msg, ctx) {
 
     if (msg.fromMe) return;
 
+    // Midia (audio, video, image) — cliente nao pode digitar
+    if (msg.type === 'ptt' || msg.type === 'audio' || (msg.hasMedia && !msg.body.trim())) {
+        const clienteNome = msg._data?.notifyName || nomeCliente(chatId);
+        await client.sendMessage(chatId,
+            '📵 *Atendimento Humano*\n\n' +
+            'Você enviou um áudio, mas sou um robô e não entendo áudios.\n\n' +
+            '🔔 Um atendente humano foi avisado e vai falar com você em breve!\n\n' +
+            'Se preferir, pode *digitar* sua mensagem que eu entendo.');
+        await db.ref('restaurants/' + slug + '/assistencias').push({
+            cliente: clienteNome,
+            chatId: chatId,
+            tipo: msg.type || 'midia',
+            timestamp: agora(),
+            status: 'pendente'
+        });
+        console.log(`🔔 [${slug}] Atendimento humano solicitado por ${clienteNome} (${chatId})`);
+        return;
+    }
+
     const texto = msg.body.trim();
     const chatId = msg.from;
     const s = sessoes[chatId];

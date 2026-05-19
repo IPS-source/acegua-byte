@@ -99,6 +99,12 @@
         .whatsapp-steps li { color: #888; font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
+        .assistencia-card { background: #141414; border: 1px solid #333; border-radius: 10px; padding: 14px; margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .assistencia-card .assistencia-header { flex: 1; min-width: 200px; }
+        .assistencia-card .assistencia-cliente { color: #fff; font-weight: bold; font-size: 14px; }
+        .assistencia-card .assistencia-time { color: #555; font-size: 12px; margin-left: 10px; }
+        .assistencia-card .assistencia-meta { display: flex; gap: 6px; }
+        .assistencia-card .order-btn { margin-left: auto; }
         .settings-form { max-width: 500px; }
         .settings-form .campo { margin-bottom: 16px; }
         .settings-form label { display: block; font-size: 13px; color: #888; margin-bottom: 5px; font-weight: 600; }
@@ -125,6 +131,7 @@
         <div class="tab" data-tab="cardapio" onclick="switchTab('cardapio')">🍽️ Cardápio</div>
         <div class="tab" data-tab="qr" onclick="switchTab('qr')">📱 QR Code</div>
         <div class="tab" data-tab="config" onclick="switchTab('config')">⚙️ Config</div>
+        <div class="tab" data-tab="atendimento" onclick="switchTab('atendimento')">🔔 Atendimento</div>
         <div class="tab" data-tab="whatsapp" onclick="switchTab('whatsapp')">📱 WhatsApp</div>
     </div>
 
@@ -209,6 +216,12 @@
                     <button class="btn-whatsapp danger" id="btn-wa-disconnect" onclick="desconectarWhatsApp()" style="display:none;">🔌 Desconectar</button>
                 </div>
             </div>
+        </div>
+
+        <div class="page" id="page-atendimento">
+            <h2>🔔 Atendimento Humano</h2>
+            <p style="color:#666;font-size:13px;margin-bottom:20px;">Clientes que enviaram áudio e precisam de atendimento humano.</p>
+            <div id="assistencias-list"><div class="empty-state"><p>Nenhum atendimento pendente</p></div></div>
         </div>
     </div>
 
@@ -370,6 +383,45 @@
             updateCounts(pCount, cCount, fCount);
             knownOrders = currentIds;
         });
+
+        let knownAssistencias = {};
+
+        restRef.child('assistencias').on('value', (snap) => {
+            const list = document.getElementById('assistencias-list');
+            const currentIds = {};
+            if (!snap.exists()) {
+                list.innerHTML = '<div class="empty-state"><p>Nenhum atendimento pendente</p></div>';
+                knownAssistencias = {};
+                return;
+            }
+            let html = '';
+            snap.forEach(child => {
+                const a = child.val();
+                const id = child.key;
+                currentIds[id] = true;
+                if (a.status === 'pendente') {
+                    if (!knownAssistencias[id]) {
+                        setTimeout(() => playNotificationSound(), 100);
+                    }
+                    html += `<div class="assistencia-card">
+                        <div class="assistencia-header">
+                            <span class="assistencia-cliente">📞 ${a.cliente || 'Desconhecido'}</span>
+                            <span class="assistencia-time">${a.timestamp || ''}</span>
+                        </div>
+                        <div class="assistencia-meta">
+                            <span class="tag">🎤 ${a.tipo || 'midia'}</span>
+                        </div>
+                        <button class="order-btn finalizar" onclick="atenderAssistencia('${id}')">✅ Atendido</button>
+                    </div>`;
+                }
+            });
+            list.innerHTML = html || '<div class="empty-state"><p>Nenhum atendimento pendente</p></div>';
+            knownAssistencias = currentIds;
+        });
+
+        function atenderAssistencia(id) {
+            db.ref('restaurants/' + restSlug + '/assistencias/' + id).update({ status: 'atendido' }).then(() => toast('Marcado como atendido'));
+        }
 
         function updateCounts(p, c, f) {
             document.getElementById('count-pendente').textContent = p;
