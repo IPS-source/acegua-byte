@@ -50,7 +50,7 @@ class BotManager {
             authStrategy: new LocalAuth({ clientId: 'rest-' + slug }),
             puppeteer: {
                 headless: true,
-                args: ['--disable-dev-shm-usage']
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
             }
         });
 
