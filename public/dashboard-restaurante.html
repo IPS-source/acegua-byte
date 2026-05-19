@@ -6,6 +6,7 @@
     <title>Dashboard — Aceguá Byte</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; }
@@ -79,6 +80,25 @@
         .btn-copiar { background: #222; border: 1px solid #444; color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px; }
         .btn-copiar:hover { background: #333; }
 
+        .whatsapp-status { text-align: center; padding: 30px 20px; }
+        .whatsapp-status .status-icon { font-size: 64px; margin-bottom: 15px; }
+        .whatsapp-status .status-text { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+        .whatsapp-status .status-info { font-size: 13px; color: #888; margin-bottom: 20px; }
+        .whatsapp-status .status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+        .whatsapp-status .status-dot.red { background: #e74c3c; }
+        .whatsapp-status .status-dot.yellow { background: #f1c40f; }
+        .whatsapp-status .status-dot.green { background: #2ecc71; }
+        .whatsapp-status .status-dot.blue { background: #00d4ff; animation: pulse 1s infinite; }
+        .btn-whatsapp { background: #25D366; color: #fff; border: none; padding: 14px 32px; border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 15px; transition: opacity 0.2s; }
+        .btn-whatsapp:hover { opacity: 0.85; }
+        .btn-whatsapp.danger { background: #e74c3c; }
+        .btn-whatsapp:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .whatsapp-qr { background: #fff; border-radius: 12px; padding: 16px; display: inline-block; margin: 15px 0; }
+        .whatsapp-qr img { display: block; max-width: 280px; }
+        .whatsapp-steps { max-width: 400px; margin: 0 auto; text-align: left; }
+        .whatsapp-steps li { color: #888; font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
         .settings-form { max-width: 500px; }
         .settings-form .campo { margin-bottom: 16px; }
         .settings-form label { display: block; font-size: 13px; color: #888; margin-bottom: 5px; font-weight: 600; }
@@ -105,6 +125,7 @@
         <div class="tab" data-tab="cardapio" onclick="switchTab('cardapio')">🍽️ Cardápio</div>
         <div class="tab" data-tab="qr" onclick="switchTab('qr')">📱 QR Code</div>
         <div class="tab" data-tab="config" onclick="switchTab('config')">⚙️ Config</div>
+        <div class="tab" data-tab="whatsapp" onclick="switchTab('whatsapp')">📱 WhatsApp</div>
     </div>
 
     <div class="content">
@@ -160,7 +181,33 @@
                     <label>Endereço</label>
                     <input type="text" id="cfg-endereco">
                 </div>
+                <div class="campo">
+                    <label>🌐 URL do Cardápio Digital</label>
+                    <input type="url" id="cfg-cardapio-url" placeholder="https://seudominio.com/cardapio/meu-slug">
+                    <div class="hint" style="font-size:11px;color:#555;margin-top:3px;">O bot enviará este link para os clientes que pedirem o cardápio. Se vazio, o bot entra no modo interativo pelo WhatsApp.</div>
+                </div>
                 <button class="btn" onclick="salvarConfig()">Salvar Alterações</button>
+            </div>
+        </div>
+
+        <div class="page" id="page-whatsapp">
+            <h2>📱 Vincular WhatsApp</h2>
+            <p style="color:#666;font-size:13px;margin-bottom:20px;">Conecte o WhatsApp do restaurante para receber e responder pedidos automaticamente pelo bot.</p>
+            <div class="whatsapp-status" id="whatsapp-status">
+                <div class="status-icon" id="wa-icon">📱</div>
+                <div class="status-text">
+                    <span class="status-dot red" id="wa-dot"></span>
+                    <span id="wa-status-text">Desconectado</span>
+                </div>
+                <div class="status-info" id="wa-info">Nenhum WhatsApp vinculado</div>
+                <div id="wa-qr-container" style="display:none;">
+                    <div class="whatsapp-qr" id="wa-qr-code"></div>
+                    <p style="color:#888;font-size:13px;margin:10px 0;">Escaneie com WhatsApp > Menu > WhatsApp Web</p>
+                </div>
+                <div id="wa-actions">
+                    <button class="btn-whatsapp" id="btn-wa-connect" onclick="conectarWhatsApp()">🔗 Vincular WhatsApp</button>
+                    <button class="btn-whatsapp danger" id="btn-wa-disconnect" onclick="desconectarWhatsApp()" style="display:none;">🔌 Desconectar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -175,6 +222,8 @@
 
         let restSlug = null;
         let restData = null;
+        let editando = null;
+        let cardapioCache = null;
 
         function toast(msg, erro) {
             const t = document.getElementById('toast');
@@ -291,7 +340,8 @@
 
         restRef.child('cardapio').on('value', (snap) => {
             if (!snap.exists()) return;
-            renderCardapio(snap.val());
+            cardapioCache = snap.val();
+            if (!editando) renderCardapio(cardapioCache);
         });
 
         function renderCardapio(data) {
@@ -311,6 +361,21 @@
 
                 const itemsHtml = itemKeys.map(itemKey => {
                     const item = itens[itemKey];
+                    if (editando && editando.catKey === catKey && editando.itemKey === itemKey) {
+                        const escNome = (item.nome || '').replace(/"/g, '&quot;');
+                        const escDesc = (item.desc || '').replace(/"/g, '&quot;');
+                        return `<div class="item-row" style="flex-direction:column;gap:8px;align-items:stretch;">
+                            <div style="display:flex;gap:8px;">
+                                <input type="text" id="edit-nome" value="${escNome}" style="flex:2;" placeholder="Nome">
+                                <input type="number" id="edit-preco" value="${item.preco || 0}" step="0.01" style="flex:1;width:80px;" placeholder="Preço">
+                            </div>
+                            <input type="text" id="edit-desc" value="${escDesc}" placeholder="Descrição">
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn-sm" onclick="salvarItem('${catKey}', '${itemKey}')" style="background:#00d4ff;color:#000;">💾 Salvar</button>
+                                <button class="btn-sm" onclick="cancelarEdicao()" style="background:#333;color:#e0e0e0;">Cancelar</button>
+                            </div>
+                        </div>`;
+                    }
                     return `<div class="item-row">
                         <div class="item-info">
                             <strong>${item.nome}</strong>
@@ -318,6 +383,7 @@
                             ${item.desc ? `<div class="desc">${item.desc}</div>` : ''}
                         </div>
                         <div class="item-actions">
+                            <button class="btn-sm" onclick="editarItem('${catKey}', '${itemKey}')" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;">✏️</button>
                             <button class="btn-sm danger" onclick="removerItem('${catKey}', '${itemKey}')">✕</button>
                         </div>
                     </div>`;
@@ -382,6 +448,30 @@
         function removerItem(catKey, itemKey) {
             if (!confirm('Remover este item?')) return;
             db.ref('restaurants/' + restSlug + '/cardapio/categorias/' + catKey + '/itens/' + itemKey).remove().then(() => toast('Item removido'));
+        }
+
+        function editarItem(catKey, itemKey) {
+            editando = { catKey, itemKey };
+            renderCardapio(cardapioCache);
+        }
+
+        function salvarItem(catKey, itemKey) {
+            const nome = document.getElementById('edit-nome').value.trim();
+            const preco = parseFloat(document.getElementById('edit-preco').value);
+            const desc = document.getElementById('edit-desc').value.trim();
+            if (!nome || isNaN(preco)) { toast('Nome e preço obrigatórios', true); return; }
+            db.ref('restaurants/' + restSlug + '/cardapio/categorias/' + catKey + '/itens/' + itemKey)
+                .update({ nome, preco, desc })
+                .then(() => {
+                    editando = null;
+                    toast('Item atualizado!');
+                    renderCardapio(cardapioCache);
+                });
+        }
+
+        function cancelarEdicao() {
+            editando = null;
+            renderCardapio(cardapioCache);
         }
 
         restRef.once('value').then(snap => {
@@ -454,6 +544,7 @@
             document.getElementById('cfg-botnumber').value = restData.centralBotNumber || '';
             document.getElementById('cfg-telefone').value = restData.telefone || '';
             document.getElementById('cfg-endereco').value = restData.endereco || '';
+            document.getElementById('cfg-cardapio-url').value = restData.cardapioUrl || '';
 
             const menuLink = window.location.origin + '/cardapio/' + restSlug;
             document.getElementById('qr-link').textContent = menuLink;
@@ -467,7 +558,8 @@
                 whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
                 centralBotNumber: document.getElementById('cfg-botnumber').value.trim(),
                 telefone: document.getElementById('cfg-telefone').value.trim(),
-                endereco: document.getElementById('cfg-endereco').value.trim()
+                endereco: document.getElementById('cfg-endereco').value.trim(),
+                cardapioUrl: document.getElementById('cfg-cardapio-url').value.trim()
             };
             if (!data.nome) { toast('Nome é obrigatório', true); return; }
             db.ref('restaurants/' + restSlug).update(data).then(() => {
@@ -478,6 +570,132 @@
                 toast('Configurações salvas!');
             });
         }
+
+        // ========== WHATSAPP (SOCKET.IO) ==========
+        let waSocket = null;
+        let waJoined = false;
+
+        function initWhatsApp() {
+            const token = localStorage.getItem('aceguabyte_token');
+            if (!token || !restSlug) return;
+
+            waSocket = io();
+
+            waSocket.on('connect', () => {
+                console.log('🔌 Socket conectado');
+                waSocket.emit('join', { slug: restSlug, token });
+            });
+
+            waSocket.on('connect_error', (err) => {
+                console.error('Socket connect error:', err.message);
+                toast('Erro de conexão com o servidor', true);
+            });
+
+            waSocket.on('joined', (data) => {
+                console.log('📱 Conectado à sala WhatsApp:', data.slug);
+                waJoined = true;
+            });
+
+            waSocket.on('whatsapp:qr', (data) => {
+                if (data.slug !== restSlug) return;
+                const container = document.getElementById('wa-qr-code');
+                container.innerHTML = `<img src="${data.qr}" alt="QR Code">`;
+                document.getElementById('wa-qr-container').style.display = 'block';
+                setWaStatus('qr', 'Escaneie o QR Code', 'Aguardando leitura...');
+                // Reset button
+                document.getElementById('btn-wa-connect').disabled = false;
+                document.getElementById('btn-wa-connect').textContent = '🔗 Vincular WhatsApp';
+            });
+
+            waSocket.on('whatsapp:status', (data) => {
+                if (data.slug !== restSlug) return;
+                if (data.status === 'connected') {
+                    setWaStatus('connected', 'Conectado', `WhatsApp vinculado: ${data.numero || data.info || ''}`);
+                    document.getElementById('btn-wa-connect').style.display = 'none';
+                    document.getElementById('btn-wa-disconnect').style.display = 'inline-block';
+                    document.getElementById('wa-qr-container').style.display = 'none';
+                } else if (data.status === 'connecting') {
+                    setWaStatus('connecting', 'Conectando...', 'Preparando conexão...');
+                } else if (data.status === 'disconnected') {
+                    setWaStatus('disconnected', 'Desconectado', data.info || 'WhatsApp não vinculado');
+                    document.getElementById('btn-wa-connect').style.display = 'inline-block';
+                    document.getElementById('btn-wa-disconnect').style.display = 'none';
+                    document.getElementById('wa-qr-container').style.display = 'none';
+                } else if (data.status === 'auth_failure') {
+                    setWaStatus('disconnected', 'Falha na autenticação', 'Tente vincular novamente');
+                    document.getElementById('btn-wa-connect').style.display = 'inline-block';
+                    document.getElementById('btn-wa-disconnect').style.display = 'none';
+                    document.getElementById('wa-qr-container').style.display = 'none';
+                    toast('Falha na autenticação do WhatsApp', true);
+                } else if (data.status === 'error') {
+                    setWaStatus('disconnected', 'Erro', data.info || 'Erro ao conectar');
+                    document.getElementById('btn-wa-connect').style.display = 'inline-block';
+                    document.getElementById('btn-wa-disconnect').style.display = 'none';
+                    document.getElementById('wa-qr-container').style.display = 'none';
+                    toast('Erro: ' + (data.info || 'desconhecido'), true);
+                }
+            });
+
+            waSocket.on('error', (msg) => {
+                console.error('Socket error:', msg);
+                toast('Erro: ' + msg, true);
+            });
+
+            waSocket.on('disconnect', () => {
+                console.log('🔌 Socket desconectado');
+                waJoined = false;
+            });
+        }
+
+        function setWaStatus(status, text, info) {
+            const dot = document.getElementById('wa-dot');
+            dot.className = 'status-dot';
+            if (status === 'connected') dot.classList.add('green');
+            else if (status === 'connecting' || status === 'qr') dot.classList.add('blue');
+            else dot.classList.add('red');
+
+            document.getElementById('wa-status-text').textContent = text;
+            document.getElementById('wa-info').textContent = info;
+        }
+
+        function conectarWhatsApp() {
+            if (!waSocket || !waSocket.connected) {
+                toast('Erro de conexão com o servidor', true);
+                return;
+            }
+            if (!waJoined) {
+                toast('Aguardando autenticação... tente novamente', true);
+                return;
+            }
+            document.getElementById('btn-wa-connect').disabled = true;
+            document.getElementById('btn-wa-connect').textContent = '⏳ Conectando...';
+            setWaStatus('connecting', 'Conectando...', 'Iniciando WhatsApp...');
+            document.getElementById('wa-qr-container').style.display = 'none';
+            waSocket.emit('whatsapp:connect', { slug: restSlug });
+            // Timeout de segurança: se não chegar QR em 60s, libera botão
+            setTimeout(() => {
+                const btn = document.getElementById('btn-wa-connect');
+                if (btn.disabled) {
+                    btn.disabled = false;
+                    btn.textContent = '🔗 Vincular WhatsApp';
+                }
+            }, 60000);
+        }
+
+        function desconectarWhatsApp() {
+            if (!confirm('Desconectar o WhatsApp do restaurante?')) return;
+            if (waSocket && waSocket.connected) {
+                waSocket.emit('whatsapp:disconnect', { slug: restSlug });
+            }
+            document.getElementById('btn-wa-connect').style.display = 'inline-block';
+            document.getElementById('btn-wa-disconnect').style.display = 'none';
+            setWaStatus('disconnected', 'Desconectado', 'WhatsApp não vinculado');
+        }
+
+        // Iniciar socket quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initWhatsApp, 500);
+        });
     </script>
 </body>
 </html>

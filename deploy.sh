@@ -1,6 +1,7 @@
 #!/bin/bash
 # Script de deploy para DigitalOcean / VPS Ubuntu
 # Uso: bash deploy.sh
+# Primeiro configure o repositório: git remote set-url origin <SEU-REPO>
 
 echo "=== Aceguá Byte — Deploy ==="
 
@@ -12,17 +13,19 @@ sudo apt install -y nodejs npm git chromium-browser
 if [ -d "/opt/aceguabyte" ]; then
     cd /opt/aceguabyte && git pull
 else
-    git clone <SEU-REPO> /opt/aceguabyte
+    git clone https://github.com/IPS-source/acegua-byte /opt/aceguabyte
     cd /opt/aceguabyte
 fi
 
-# 3. Instalar dependências Node
+# 3. Colocar serviceAccountKey.json (faça upload manual para /opt/aceguabyte/)
+
+# 4. Instalar dependências Node
 npm install
 
-# 4. Criar serviço systemd para o servidor
-sudo tee /etc/systemd/system/aceguabyte-web.service > /dev/null <<'EOF'
+# 5. Criar serviço systemd (único: servidor + bots integrados)
+sudo tee /etc/systemd/system/aceguabyte.service > /dev/null <<'EOF'
 [Unit]
-Description=Aceguá Byte Web Server
+Description=Aceguá Byte — Servidor + WhatsApp Bots
 After=network.target
 
 [Service]
@@ -38,30 +41,17 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF
 
-# 5. Criar serviço para o bot (se for usar)
-sudo tee /etc/systemd/system/aceguabyte-bot.service > /dev/null <<'EOF'
-[Unit]
-Description=Aceguá Byte WhatsApp Bot
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/aceguabyte
-ExecStart=/usr/bin/node index.js
-Restart=always
-RestartSec=10
-Environment=REST_SLUG=geral
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# 6. Habilitar e iniciar serviços
+# 6. Habilitar e iniciar
 sudo systemctl daemon-reload
-sudo systemctl enable aceguabyte-web
-sudo systemctl restart aceguabyte-web
-echo "=== Servidor rodando em http://$(curl -s ifconfig.me):3000 ==="
+sudo systemctl enable aceguabyte
+sudo systemctl restart aceguabyte
+
 echo ""
-echo "Para iniciar o bot: sudo systemctl start aceguabyte-bot"
-echo "Para ver logs: sudo journalctl -u aceguabyte-web -f"
+echo "✅ Deploy concluído!"
+echo "🖥️ Servidor: http://$(curl -s ifconfig.me):3000"
+echo ""
+echo "Para ver logs: sudo journalctl -u aceguabyte -f"
+echo "Para reiniciar: sudo systemctl restart aceguabyte"
+echo ""
+echo "IMPORTANTE: Faça upload do serviceAccountKey.json para /opt/aceguabyte/"
+echo "IMPORTANTE: Configure Nginx + Certbot para HTTPS (recomendado)"

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardápio</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 0 0 110px; }
+        .header { background: #111; padding: 20px; text-align: center; border-bottom: 2px solid #00d4ff; position: sticky; top: 0; z-index: 10; }
+        .header h1 { color: #00d4ff; font-size: 22px; }
+        .header p { color: #666; font-size: 13px; margin-top: 4px; }
+        .container { max-width: 480px; margin: 0 auto; padding: 15px; }
+        .categoria { font-size: 16px; font-weight: bold; color: #00d4ff; margin: 25px 0 12px; padding-left: 5px; display: flex; align-items: center; gap: 8px; }
+        .categoria::after { content: ''; flex: 1; height: 1px; background: #222; }
+        .card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s; }
+        .card:hover { border-color: #00d4ff; }
+        .card-info h3 { font-size: 15px; color: #fff; margin-bottom: 4px; }
+        .card-info .preco { color: #00d4ff; font-weight: bold; font-size: 17px; }
+        .card-info .desc { color: #777; font-size: 12px; margin-top: 2px; }
+        .btn-add { background: #00d4ff; color: #000; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.1s; }
+        .btn-add:active { background: #00a0cc; transform: scale(0.9); }
+        .carrinho-section { max-width: 480px; margin: 0 auto; padding: 0 15px; }
+        .carrinho-section h2 { text-align: center; margin: 20px 0 10px; color: #fff; font-size: 16px; }
+        .item-carrinho { background: #141414; border: 1px solid #222; border-radius: 8px; padding: 12px 15px; margin-bottom: 6px; display: flex; justify-content: space-between; font-size: 14px; align-items: center; }
+        .item-carrinho .remover { color: #e74c3c; background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 0 0 10px; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: #111; border-top: 1px solid #00d4ff; padding: 15px 20px; z-index: 10; }
+        .footer-inner { max-width: 480px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .footer-total { font-size: 14px; color: #888; }
+        .footer-total span { color: #00d4ff; font-size: 20px; font-weight: bold; }
+        .btn-finalizar { background: #00d4ff; color: #000; border: none; padding: 14px 24px; border-radius: 30px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s, transform 0.1s; }
+        .btn-finalizar:active:not(:disabled) { background: #00a0cc; transform: scale(0.97); }
+        .btn-finalizar:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .confirmacao { display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 20px; }
+        .confirmacao-box { background: #141414; border: 1px solid #00d4ff; border-radius: 16px; padding: 40px 30px; max-width: 360px; width: 100%; }
+        .confirmacao-box .icon { font-size: 48px; margin-bottom: 15px; }
+        .confirmacao-box h1 { color: #00d4ff; margin-bottom: 10px; font-size: 22px; }
+        .confirmacao-box p { color: #888; margin-bottom: 8px; font-size: 14px; }
+        .confirmacao-box button { background: #00d4ff; color: #000; border: none; padding: 14px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 20px; transition: background 0.2s; }
+        .confirmacao-box button:hover { background: #00a0cc; }
+        .badge-added { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #00d4ff; color: #000; padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 20; }
+        .badge-added.show { opacity: 1; }
+        .loading { text-align: center; padding: 60px 20px; color: #555; }
+        .loading .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #222; border-top-color: #00d4ff; border-radius: 50%; animation: spin 0.6s linear infinite; margin-bottom: 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-card { text-align: center; padding: 60px 20px; }
+        .error-card .icon { font-size: 48px; margin-bottom: 10px; }
+        .error-card p { color: #888; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        .modal-box { background: #141414; border: 1px solid #333; border-radius: 16px; padding: 28px 24px; max-width: 400px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-box h2 { color: #00d4ff; font-size: 18px; margin-bottom: 20px; text-align: center; }
+        .modal-box .step-indicator { text-align: center; font-size: 12px; color: #555; margin-bottom: 15px; }
+        .modal-box .step-indicator span { color: #00d4ff; }
+        .modal-box .options { display: flex; gap: 10px; margin-bottom: 15px; }
+        .modal-box .option-btn { flex: 1; background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px 10px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 14px; color: #e0e0e0; }
+        .modal-box .option-btn:hover { border-color: #555; background: #222; }
+        .modal-box .option-btn.selected { border-color: #00d4ff; background: rgba(0,212,255,0.1); color: #00d4ff; }
+        .modal-box .option-btn .icon { font-size: 28px; display: block; margin-bottom: 6px; }
+        .modal-box input { width: 100%; padding: 12px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; outline: none; margin-bottom: 15px; }
+        .modal-box input:focus { border-color: #00d4ff; }
+        .modal-box .btn-next { background: #00d4ff; color: #000; border: none; padding: 14px; width: 100%; border-radius: 30px; font-weight: bold; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        .modal-box .btn-next:hover { background: #00a0cc; }
+        .modal-box .btn-next:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .modal-box .btn-back { background: none; border: 1px solid #333; color: #888; padding: 10px; width: 100%; border-radius: 30px; font-size: 13px; cursor: pointer; margin-top: 8px; }
+        .modal-box .btn-back:hover { background: #1a1a1a; }
+        .modal-box .resumo-pedido { background: #1a1a1a; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 13px; line-height: 1.6; }
+        .modal-box .resumo-pedido .total { color: #00d4ff; font-weight: bold; font-size: 15px; margin-top: 8px; }
+        .modal-box .step-content { display: none; }
+        .modal-box .step-content.active { display: block; }
+        .sdot { width:10px;height:10px;border-radius:50%;background:#222;display:inline-block;transition:all 0.3s; }
+        .sdot.active { background:#00d4ff;box-shadow:0 0 6px rgba(0,212,255,0.4); }
+        .sline { width:20px;height:2px;background:#222;display:inline-block; }
+        .sline.active { background:#00d4ff; }
+    </style>
+</head>
+<body>
+    <div class="header" id="header">
+        <h1 id="rest-title">⚡ Cardápio</h1>
+        <p id="rest-subtitle">Faça seu pedido pelo WhatsApp</p>
+    </div>
+    <div class="container" id="menu-container">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Carregando cardápio...</p>
+        </div>
+    </div>
+    <div class="carrinho-section" id="carrinho-section" style="display:none;">
+        <h2>🛒 Seu Carrinho</h2>
+        <div id="carrinho-items"></div>
+    </div>
+    <div class="footer" id="footer">
+        <div class="footer-inner">
+            <div class="footer-total">Total<br><span>R$ <span id="total">0,00</span></span></div>
+            <button class="btn-finalizar" id="btn-finalizar" onclick="checkout()" disabled>📲 Enviar Pedido</button>
+        </div>
+    </div>
+    <div class="badge-added" id="badge">✓ Adicionado</div>
+
+    <!-- MODAL CHECKOUT -->
+    <div class="modal-overlay" id="checkout-modal">
+        <div class="modal-box">
+            <div class="step-indicator" id="step-indicator">
+                <div id="step-desc" style="font-size:12px;color:#888;margin-bottom:4px;">📍 Entrega</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
+                    <span class="sdot active"></span><span class="sline"></span>
+                    <span class="sdot"></span><span class="sline"></span>
+                    <span class="sdot"></span><span class="sline"></span>
+                    <span class="sdot"></span><span class="sline"></span>
+                    <span class="sdot"></span>
+                </div>
+                <div style="margin-top:4px;font-size:11px;color:#444;">Passo <span id="step-num">1 de 5</span></div>
+            </div>
+
+            <!-- Step 1: Entrega -->
+            <div class="step-content active" id="step-1">
+                <h2>📍 Como quer receber?</h2>
+                <div class="options">
+                    <div class="option-btn" onclick="selectEntrega('delivery')" id="opt-delivery">
+                        <span class="icon">🛵</span> Delivery
+                    </div>
+                    <div class="option-btn" onclick="selectEntrega('retirada')" id="opt-retirada">
+                        <span class="icon">🏪</span> Retirar
+                    </div>
+                </div>
+                <button class="btn-next" id="btn-step1" disabled onclick="nextStep()">Continuar</button>
+            </div>
+
+            <!-- Step 2: Endereço (só se delivery) -->
+            <div class="step-content" id="step-2">
+                <h2>📍 Endereço de entrega</h2>
+                <input type="text" id="input-endereco" placeholder="Rua, número, bairro..." oninput="checkStep2()">
+                <button class="btn-next" id="btn-step2" disabled onclick="nextStep()">Continuar</button>
+                <button class="btn-back" onclick="prevStep()">Voltar</button>
+            </div>
+
+            <!-- Step 3: Pagamento -->
+            <div class="step-content" id="step-3">
+                <h2>💳 Forma de pagamento</h2>
+                <div class="options" style="flex-direction:column;">
+                    <div class="option-btn" onclick="selectPagamento('efectivo')" id="opt-efectivo" style="display:flex;align-items:center;gap:12px;padding:14px;">
+                        <span style="font-size:24px;">💵</span> Efectivo (dinheiro)
+                    </div>
+                    <div class="option-btn" onclick="selectPagamento('tarjeta')" id="opt-tarjeta" style="display:flex;align-items:center;gap:12px;padding:14px;">
+                        <span style="font-size:24px;">💳</span> Tarjeta (débito/crédito)
+                    </div>
+                    <div class="option-btn" onclick="selectPagamento('pix')" id="opt-pix" style="display:flex;align-items:center;gap:12px;padding:14px;">
+                        <span style="font-size:24px;">📱</span> PIX
+                    </div>
+                </div>
+                <button class="btn-next" id="btn-step3" disabled onclick="nextStep()">Continuar</button>
+                <button class="btn-back" onclick="prevStep()">Voltar</button>
+            </div>
+
+            <!-- Step 4: Troco (só se efectivo) -->
+            <div class="step-content" id="step-4">
+                <h2>💵 Troco?</h2>
+                <div class="options">
+                    <div class="option-btn" onclick="selectTroco('sim')" id="opt-troco-sim">
+                        <span class="icon">✅</span> Sim, preciso
+                    </div>
+                    <div class="option-btn" onclick="selectTroco('nao')" id="opt-troco-nao">
+                        <span class="icon">❌</span> Valor exato
+                    </div>
+                </div>
+                <div id="troco-valor-div" style="display:none;margin-bottom:15px;">
+                    <input type="text" id="input-troco" placeholder="Com quanto vai pagar? Ex: 100" oninput="checkStep4()">
+                </div>
+                <button class="btn-next" id="btn-step4" disabled onclick="nextStep()">Continuar</button>
+                <button class="btn-back" onclick="prevStep()">Voltar</button>
+            </div>
+
+            <!-- Step 5: Confirmar -->
+            <div class="step-content" id="step-5">
+                <h2>📋 Confirmar Pedido</h2>
+                <div class="resumo-pedido" id="resumo-final"></div>
+                <button class="btn-next" onclick="enviarPedido()">📲 Enviar Pedido</button>
+                <button class="btn-back" onclick="prevStep()">Alterar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const DB_URL = 'https://ips-source-pedidos-default-rtdb.firebaseio.com/';
+        firebase.initializeApp({ databaseURL: DB_URL });
+        const db = firebase.database();
+
+        let cart = [];
+        let total = 0;
+        let restSlug = '';
+        let whatsappNum = '';
+
+        const slug = window.location.pathname.replace('/cardapio/', '').replace(/\/$/, '');
+        if (!slug) { erroCardapio('URL inválida'); }
+
+        db.ref('restaurants/' + slug).once('value').then(snap => {
+            if (!snap.exists()) { erroCardapio('Restaurante não encontrado'); return; }
+            const rest = snap.val();
+            restSlug = slug;
+            whatsappNum = rest.centralBotNumber || rest.whatsapp || '';
+            document.getElementById('rest-title').textContent = '⚡ ' + (rest.nome || 'Cardápio');
+            document.getElementById('rest-subtitle').textContent = 'Faça seu pedido pelo WhatsApp';
+            document.title = 'Cardápio — ' + (rest.nome || '');
+            carregarCardapio(slug);
+        }).catch(e => erroCardapio('Erro ao carregar: ' + e.message));
+
+        function carregarCardapio(slug) {
+            db.ref('restaurants/' + slug + '/cardapio/categorias').on('value', snap => {
+                const container = document.getElementById('menu-container');
+                if (!snap.exists()) {
+                    container.innerHTML = '<div class="error-card"><div class="icon">🍽️</div><p>Cardápio vazio</p></div>';
+                    return;
+                }
+                let html = '';
+                const cats = snap.val();
+                const keys = Object.keys(cats).sort((a, b) => (cats[a].ordem || 999) - (cats[b].ordem || 999));
+                keys.forEach(key => {
+                    const cat = cats[key];
+                    html += `<div class="categoria">${cat.nome}</div>`;
+                    const itens = cat.itens || {};
+                    Object.keys(itens).forEach(ik => {
+                        const item = itens[ik];
+                        const preco = Number(item.preco || 0);
+                        html += `<div class="card">
+                            <div class="card-info">
+                                <h3>${item.nome}</h3>
+                                <p class="preco">R$ ${preco.toFixed(2)}</p>
+                                ${item.desc ? `<p class="desc">${item.desc}</p>` : ''}
+                            </div>
+                            <button class="btn-add" onclick="add('${item.nome.replace(/'/g, "\\'")}', ${preco})">+</button>
+                        </div>`;
+                    });
+                });
+                container.innerHTML = html;
+            });
+        }
+
+        function erroCardapio(msg) {
+            document.getElementById('menu-container').innerHTML = `<div class="error-card"><div class="icon">😕</div><p>${msg}</p></div>`;
+        }
+
+        function formatMoney(v) { return v.toFixed(2).replace('.', ','); }
+
+        function showBadge() {
+            const badge = document.getElementById('badge');
+            badge.classList.add('show');
+            setTimeout(() => badge.classList.remove('show'), 1200);
+        }
+
+        function add(nome, preco) {
+            cart.push({ nome, preco });
+            total += preco;
+            showBadge();
+            atualizarUI();
+        }
+
+        function remover(index) {
+            total -= cart[index].preco;
+            cart.splice(index, 1);
+            atualizarUI();
+        }
+
+        function atualizarUI() {
+            document.getElementById('total').innerText = formatMoney(total);
+            const btn = document.getElementById('btn-finalizar');
+            const section = document.getElementById('carrinho-section');
+            const items = document.getElementById('carrinho-items');
+            if (cart.length > 0) {
+                btn.disabled = false;
+                section.style.display = 'block';
+                items.innerHTML = cart.map((item, i) =>
+                    `<div class="item-carrinho">
+                        <span>${item.nome}</span>
+                        <span style="display:flex;align-items:center;">
+                            R$ ${formatMoney(item.preco)}
+                            <button class="remover" onclick="remover(${i})">✕</button>
+                        </span>
+                    </div>`
+                ).join('');
+            } else {
+                btn.disabled = true;
+                section.style.display = 'none';
+            }
+        }
+
+        let checkoutData = { entrega: null, endereco: '', pagamento: null, troco: null, trocoValor: '' };
+        let currentStep = 1;
+
+        function checkout() {
+            if (cart.length === 0 || !whatsappNum) return alert('Carrinho vazio ou WhatsApp não configurado');
+            checkoutData = { entrega: null, endereco: '', pagamento: null, troco: null, trocoValor: '' };
+            currentStep = 1;
+            showStep(1);
+            document.getElementById('checkout-modal').classList.add('show');
+        }
+
+        function showStep(n) {
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('step-' + n).classList.add('active');
+            currentStep = n;
+
+            if (n === 2 && checkoutData.entrega !== 'delivery') {
+                // Delivery step, skip if retirada
+                nextStep();
+                return;
+            }
+            if (n === 4 && checkoutData.pagamento !== 'efectivo') {
+                // Troco step, skip if not cash
+                nextStep();
+                return;
+            }
+            updateIndicator();
+        }
+
+        function updateIndicator() {
+            const steps = { 1: '📍 Entrega', 2: '📍 Endereço', 3: '💳 Pagamento', 4: '💵 Troco', 5: '✅ Confirmar' };
+            document.getElementById('step-num').textContent = currentStep + ' de 5';
+            document.getElementById('step-desc').textContent = steps[currentStep] || '';
+            document.querySelectorAll('.sdot').forEach((d, i) => d.classList.toggle('active', i < currentStep));
+            document.querySelectorAll('.sline').forEach((l, i) => l.classList.toggle('active', i < currentStep - 1));
+        }
+
+        function nextStep() {
+            if (currentStep === 1 && !checkoutData.entrega) return;
+            if (currentStep === 2 && checkoutData.entrega === 'delivery' && !checkoutData.endereco) return;
+            if (currentStep === 3 && !checkoutData.pagamento) return;
+            if (currentStep === 4 && checkoutData.pagamento === 'efectivo') {
+                if (checkoutData.troco === 'sim' && !checkoutData.trocoValor) return;
+                if (!checkoutData.troco) return;
+            }
+
+            if (currentStep === 5) return; // Ja esta na confirmacao
+            if (currentStep === 4 || (currentStep === 3 && checkoutData.pagamento !== 'efectivo') || (currentStep === 2 && checkoutData.entrega !== 'delivery')) {
+                // Ir pra confirmacao
+                showConfirmacao();
+                return;
+            }
+            showStep(currentStep + 1);
+        }
+
+        function prevStep() {
+            if (currentStep === 1) { document.getElementById('checkout-modal').classList.remove('show'); return; }
+            if (currentStep === 5) {
+                if (checkoutData.pagamento === 'efectivo') showStep(4);
+                else showStep(3);
+                return;
+            }
+            if (currentStep === 4 || currentStep === 3) showStep(3);
+            else if (currentStep === 2) showStep(1);
+            else showStep(currentStep - 1);
+        }
+
+        function selectEntrega(tipo) {
+            checkoutData.entrega = tipo;
+            document.querySelectorAll('#step-1 .option-btn').forEach(el => el.classList.remove('selected'));
+            document.getElementById('opt-' + tipo).classList.add('selected');
+            document.getElementById('btn-step1').disabled = false;
+        }
+
+        function checkStep2() {
+            const val = document.getElementById('input-endereco').value.trim();
+            if (val.length >= 5) {
+                checkoutData.endereco = val;
+                document.getElementById('btn-step2').disabled = false;
+            } else {
+                document.getElementById('btn-step2').disabled = true;
+            }
+        }
+
+        function selectPagamento(tipo) {
+            checkoutData.pagamento = tipo;
+            document.querySelectorAll('#step-3 .option-btn').forEach(el => el.classList.remove('selected'));
+            document.getElementById('opt-' + tipo).classList.add('selected');
+            document.getElementById('btn-step3').disabled = false;
+        }
+
+        function selectTroco(tipo) {
+            checkoutData.troco = tipo;
+            document.querySelectorAll('#step-4 .option-btn').forEach(el => el.classList.remove('selected'));
+            document.getElementById('opt-troco-' + tipo).classList.add('selected');
+            if (tipo === 'sim') {
+                document.getElementById('troco-valor-div').style.display = 'block';
+                document.getElementById('btn-step4').disabled = true;
+            } else {
+                document.getElementById('troco-valor-div').style.display = 'none';
+                checkoutData.trocoValor = '';
+                document.getElementById('btn-step4').disabled = false;
+            }
+        }
+
+        function checkStep4() {
+            const val = document.getElementById('input-troco').value.replace(/[^\d]/g, '');
+            if (val && parseInt(val) > 0) {
+                checkoutData.trocoValor = val;
+                document.getElementById('btn-step4').disabled = false;
+            } else {
+                document.getElementById('btn-step4').disabled = true;
+            }
+        }
+
+        function showConfirmacao() {
+            let resumo = cart.map((item, i) => `${i+1}. ${item.nome} — R$ ${formatMoney(item.preco)}`).join('\n');
+            let html = resumo.replace(/\n/g, '<br>');
+            html += `<div class="total">💰 Total: R$ ${formatMoney(total)}</div>`;
+            html += `<div style="margin-top:8px;color:#888;">🚚 ${checkoutData.entrega === 'delivery' ? 'Delivery' : 'Retirar no Local'}</div>`;
+            if (checkoutData.entrega === 'delivery') {
+                html += `<div style="color:#888;">📍 ${checkoutData.endereco}</div>`;
+            }
+            const pagoLabel = checkoutData.pagamento === 'efectivo' ? 'Efectivo' : checkoutData.pagamento === 'tarjeta' ? 'Tarjeta' : 'PIX';
+            html += `<div style="color:#888;">💳 ${pagoLabel}</div>`;
+            if (checkoutData.troco === 'sim') {
+                html += `<div style="color:#888;">💵 Troco pra R$ ${checkoutData.trocoValor}</div>`;
+            }
+            document.getElementById('resumo-final').innerHTML = html;
+            showStep(5);
+        }
+
+        function enviarPedido() {
+            if (!whatsappNum) return alert('WhatsApp não configurado');
+            const itens = cart.map((item, i) => `${i + 1}. ${item.nome} — R$ ${formatMoney(item.preco)}`).join('%0A');
+            const restNome = document.getElementById('rest-title').textContent.replace('⚡ ', '');
+
+            const entregaStr = checkoutData.entrega === 'delivery' ? '🛵 *Delivery*' : '🏪 *Retirar no Local*';
+            const enderecoStr = checkoutData.entrega === 'delivery' ? `%0A📍 ${encodeURIComponent(checkoutData.endereco)}` : '';
+            const pagoLabel = checkoutData.pagamento === 'efectivo' ? '💵 *Efectivo*' : checkoutData.pagamento === 'tarjeta' ? '💳 *Tarjeta*' : '📱 *PIX*';
+            const trocoStr = checkoutData.troco === 'sim' ? `%0A💵 *Troco pra R$${checkoutData.trocoValor}*` : '';
+
+            const msg = `⚡ *NOVO PEDIDO*%0A📍 ${encodeURIComponent(restNome)}%0A🍽️ slug:${slug}%0A%0A${itens}%0A%0A💰 *Total: R$ ${formatMoney(total)}*%0A${entregaStr}${enderecoStr}%0A${pagoLabel}${trocoStr}`;
+            const url = `https://wa.me/${whatsappNum.replace(/\D/g, '')}?text=${msg}`;
+            window.open(url, '_blank');
+            document.getElementById('checkout-modal').classList.remove('show');
+            mostrarConfirmacao();
+        }
+
+        function mostrarConfirmacao() {
+            document.body.innerHTML = `
+                <div class="confirmacao">
+                    <div class="confirmacao-box">
+                        <div class="icon">✅</div>
+                        <h1>Pedido Enviado!</h1>
+                        <p>Abra o WhatsApp e envie a mensagem.</p>
+                        <p style="color:#555;font-size:12px;">Aguarde a confirmação no chat.</p>
+                        <button onclick="location.reload()">⚡ Novo Pedido</button>
+                    </div>
+                </div>`;
+        }
+
+        function detectarSlug() {
+            const s = window.location.pathname.replace('/cardapio/', '').replace(/\/$/, '');
+            if (!s) { erroCardapio('URL inválida'); }
+        }
+    </script>
+</body>
+</html>
