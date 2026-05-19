@@ -427,12 +427,10 @@
 
             const entregaStr = checkoutData.entrega === 'delivery' ? '🛵 *Delivery*' : '🏪 *Retirar no Local*';
             const enderecoStr = checkoutData.entrega === 'delivery' ? `%0A📍 ${encodeURIComponent(checkoutData.endereco)}` : '';
-            const isPix = checkoutData.pagamento === 'pix';
             const pagoLabel = checkoutData.pagamento === 'efectivo' ? '💵 *Efectivo*' : checkoutData.pagamento === 'tarjeta' ? '💳 *Tarjeta*' : '📱 *PIX*';
-            const pixStr = isPix && pixKey ? `%0A💳 *Chave PIX:* ${encodeURIComponent(pixKey)}` : '';
             const trocoStr = checkoutData.troco === 'sim' ? `%0A💵 *Troco pra R$${checkoutData.trocoValor}*` : '';
 
-            const msg = `⚡ *NOVO PEDIDO*%0A📍 ${encodeURIComponent(restNome)}%0A🍽️ slug:${slug}%0A%0A${itens}%0A%0A💰 *Total: R$ ${formatMoney(total)}*%0A${entregaStr}${enderecoStr}%0A${pagoLabel}${pixStr}${trocoStr}`;
+            const msg = `⚡ *NOVO PEDIDO*%0A📍 ${encodeURIComponent(restNome)}%0A🍽️ slug:${slug}%0A%0A${itens}%0A%0A💰 *Total: R$ ${formatMoney(total)}*%0A${entregaStr}${enderecoStr}%0A${pagoLabel}${trocoStr}`;
             const url = `https://wa.me/${whatsappNum.replace(/\D/g, '')}?text=${msg}`;
             window.open(url, '_blank');
             document.getElementById('checkout-modal').classList.remove('show');

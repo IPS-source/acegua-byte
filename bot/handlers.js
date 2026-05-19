@@ -65,12 +65,22 @@ async function processarPedidoCardapio(texto, chatId, ctx) {
     await ref.child(pedidoId).set(novoPedido);
     console.log(`✅ Pedido WEB #${pedidoId.slice(-6)} → ${slug} — R$ ${formatMoney(total)}`);
 
-    await client.sendMessage(chatId,
-        `✅ *PEDIDO RECEBIDO!*\n\n` +
+    let confirmMsg = `✅ *PEDIDO RECEBIDO!*\n\n` +
         `🎉 Teu pedido foi enviado para *${slug}*!\n` +
         `👨‍🍳 Avisamos quando estiver pronto.\n\n` +
-        `📌 *Nº do pedido:* #${pedidoId.slice(-6)}\n\n` +
-        `📋 *menu* pra ver o cardápio\n📋 *meus pedidos* pra histórico`);
+        `📌 *Nº do pedido:* #${pedidoId.slice(-6)}`;
+
+    if (pago === 'PIX') {
+        try {
+            const pixSnap = await db.ref('restaurants/' + slug + '/pixKey').once('value');
+            if (pixSnap.exists()) {
+                confirmMsg += `\n\n💳 *Pague via PIX:*\n\`${pixSnap.val()}\``;
+            }
+        } catch (e) { /* silencioso */ }
+    }
+
+    confirmMsg += `\n\n📋 *menu* pra ver o cardápio\n📋 *meus pedidos* pra histórico`;
+    await client.sendMessage(chatId, confirmMsg);
 
     try {
         const clienteId = nomeCliente(chatId);
