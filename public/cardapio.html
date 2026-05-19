@@ -190,6 +190,7 @@
         let total = 0;
         let restSlug = '';
         let whatsappNum = '';
+        let pixKey = '';
 
         const slug = window.location.pathname.replace('/cardapio/', '').replace(/\/$/, '');
         if (!slug) { erroCardapio('URL inválida'); }
@@ -199,6 +200,7 @@
             const rest = snap.val();
             restSlug = slug;
             whatsappNum = rest.centralBotNumber || rest.whatsapp || '';
+            pixKey = rest.pixKey || '';
             document.getElementById('rest-title').textContent = '⚡ ' + (rest.nome || 'Cardápio');
             document.getElementById('rest-subtitle').textContent = 'Faça seu pedido pelo WhatsApp';
             document.title = 'Cardápio — ' + (rest.nome || '');
@@ -407,8 +409,10 @@
             if (checkoutData.entrega === 'delivery') {
                 html += `<div style="color:#888;">📍 ${checkoutData.endereco}</div>`;
             }
+            const isPix = checkoutData.pagamento === 'pix';
             const pagoLabel = checkoutData.pagamento === 'efectivo' ? 'Efectivo' : checkoutData.pagamento === 'tarjeta' ? 'Tarjeta' : 'PIX';
-            html += `<div style="color:#888;">💳 ${pagoLabel}</div>`;
+            const pixResumo = isPix && pixKey ? ` — Chave: ${pixKey}` : '';
+            html += `<div style="color:#888;">💳 ${pagoLabel}${pixResumo}</div>`;
             if (checkoutData.troco === 'sim') {
                 html += `<div style="color:#888;">💵 Troco pra R$ ${checkoutData.trocoValor}</div>`;
             }
@@ -423,10 +427,12 @@
 
             const entregaStr = checkoutData.entrega === 'delivery' ? '🛵 *Delivery*' : '🏪 *Retirar no Local*';
             const enderecoStr = checkoutData.entrega === 'delivery' ? `%0A📍 ${encodeURIComponent(checkoutData.endereco)}` : '';
+            const isPix = checkoutData.pagamento === 'pix';
             const pagoLabel = checkoutData.pagamento === 'efectivo' ? '💵 *Efectivo*' : checkoutData.pagamento === 'tarjeta' ? '💳 *Tarjeta*' : '📱 *PIX*';
+            const pixStr = isPix && pixKey ? `%0A💳 *Chave PIX:* ${encodeURIComponent(pixKey)}` : '';
             const trocoStr = checkoutData.troco === 'sim' ? `%0A💵 *Troco pra R$${checkoutData.trocoValor}*` : '';
 
-            const msg = `⚡ *NOVO PEDIDO*%0A📍 ${encodeURIComponent(restNome)}%0A🍽️ slug:${slug}%0A%0A${itens}%0A%0A💰 *Total: R$ ${formatMoney(total)}*%0A${entregaStr}${enderecoStr}%0A${pagoLabel}${trocoStr}`;
+            const msg = `⚡ *NOVO PEDIDO*%0A📍 ${encodeURIComponent(restNome)}%0A🍽️ slug:${slug}%0A%0A${itens}%0A%0A💰 *Total: R$ ${formatMoney(total)}*%0A${entregaStr}${enderecoStr}%0A${pagoLabel}${pixStr}${trocoStr}`;
             const url = `https://wa.me/${whatsappNum.replace(/\D/g, '')}?text=${msg}`;
             window.open(url, '_blank');
             document.getElementById('checkout-modal').classList.remove('show');

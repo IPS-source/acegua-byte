@@ -193,6 +193,11 @@
                     <input type="url" id="cfg-cardapio-url" placeholder="https://seudominio.com/cardapio/meu-slug">
                     <div class="hint" style="font-size:11px;color:#555;margin-top:3px;">O bot enviará este link para os clientes que pedirem o cardápio. Se vazio, o bot entra no modo interativo pelo WhatsApp.</div>
                 </div>
+                <div class="campo">
+                    <label>💳 Chave PIX</label>
+                    <input type="text" id="cfg-pixkey" placeholder="44884265068">
+                    <div class="hint" style="font-size:11px;color:#555;margin-top:3px;">Se preenchida, aparece no pedido quando o cliente escolhe PIX como forma de pagamento.</div>
+                </div>
                 <button class="btn" onclick="salvarConfig()">Salvar Alterações</button>
             </div>
         </div>
@@ -650,6 +655,7 @@
             document.getElementById('cfg-telefone').value = restData.telefone || '';
             document.getElementById('cfg-endereco').value = restData.endereco || '';
             document.getElementById('cfg-cardapio-url').value = restData.cardapioUrl || '';
+            document.getElementById('cfg-pixkey').value = restData.pixKey || '';
 
             const menuLink = window.location.origin + '/cardapio/' + restSlug;
             document.getElementById('qr-link').textContent = menuLink;
@@ -664,7 +670,8 @@
                 centralBotNumber: document.getElementById('cfg-botnumber').value.trim(),
                 telefone: document.getElementById('cfg-telefone').value.trim(),
                 endereco: document.getElementById('cfg-endereco').value.trim(),
-                cardapioUrl: document.getElementById('cfg-cardapio-url').value.trim()
+                cardapioUrl: document.getElementById('cfg-cardapio-url').value.trim(),
+                pixKey: document.getElementById('cfg-pixkey').value.trim()
             };
             if (!data.nome) { toast('Nome é obrigatório', true); return; }
             db.ref('restaurants/' + restSlug).update(data).then(() => {
