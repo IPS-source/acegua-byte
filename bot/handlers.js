@@ -156,9 +156,11 @@ async function handleMessage(msg, ctx) {
 
     if (msg.fromMe) return;
 
+    const chatId = msg.from;
+    const texto = (msg.body || '').trim();
+
     // Midia (audio, video, image) — cliente nao pode digitar
-    const corpo = msg.body || '';
-    if (msg.type === 'ptt' || msg.type === 'audio' || (msg.hasMedia && !corpo.trim())) {
+    if (msg.type === 'ptt' || msg.type === 'audio' || (msg.hasMedia && !texto.trim())) {
         const clienteNome = msg._data?.notifyName || nomeCliente(chatId);
         await client.sendMessage(chatId,
             '📵 *Atendimento Humano*\n\n' +
@@ -175,9 +177,6 @@ async function handleMessage(msg, ctx) {
         console.log(`🔔 [${slug}] Atendimento humano solicitado por ${clienteNome} (${chatId})`);
         return;
     }
-
-    const texto = msg.body.trim();
-    const chatId = msg.from;
     const s = sessoes[chatId];
     const st = sanitizar(texto);
 
