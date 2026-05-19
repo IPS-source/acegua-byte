@@ -157,7 +157,8 @@ async function handleMessage(msg, ctx) {
     if (msg.fromMe) return;
 
     // Midia (audio, video, image) — cliente nao pode digitar
-    if (msg.type === 'ptt' || msg.type === 'audio' || (msg.hasMedia && !msg.body.trim())) {
+    const corpo = msg.body || '';
+    if (msg.type === 'ptt' || msg.type === 'audio' || (msg.hasMedia && !corpo.trim())) {
         const clienteNome = msg._data?.notifyName || nomeCliente(chatId);
         await client.sendMessage(chatId,
             '📵 *Atendimento Humano*\n\n' +
