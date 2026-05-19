@@ -210,6 +210,7 @@
                 <div id="wa-qr-container" style="display:none;">
                     <div class="whatsapp-qr" id="wa-qr-code"></div>
                     <p style="color:#888;font-size:13px;margin:10px 0;">Escaneie com WhatsApp > Menu > WhatsApp Web</p>
+                    <p style="color:#555;font-size:11px;margin-bottom:10px;">⏳ O QR expira em ~20 segundos e um novo é gerado automático</p>
                 </div>
                 <div id="wa-actions">
                     <button class="btn-whatsapp" id="btn-wa-connect" onclick="conectarWhatsApp()">🔗 Vincular WhatsApp</button>
@@ -706,9 +707,8 @@
                 container.innerHTML = `<img src="${data.qr}" alt="QR Code">`;
                 document.getElementById('wa-qr-container').style.display = 'block';
                 setWaStatus('qr', 'Escaneie o QR Code', 'Aguardando leitura...');
-                // Reset button
                 document.getElementById('btn-wa-connect').disabled = false;
-                document.getElementById('btn-wa-connect').textContent = '🔗 Vincular WhatsApp';
+                document.getElementById('btn-wa-connect').textContent = '🔄 Gerar Novo QR';
             });
 
             waSocket.on('whatsapp:status', (data) => {

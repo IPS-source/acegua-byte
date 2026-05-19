@@ -12,7 +12,7 @@ class BotManager {
         this.pedidoListeners = new Map();
     }
 
-    async start(slug) {
+    async start(slug, clearSession = false) {
         if (this.bots.has(slug)) {
             const existing = this.bots.get(slug);
             if (existing.client && existing.status === 'connected') {
@@ -20,6 +20,13 @@ class BotManager {
                 return;
             }
             await this.stop(slug);
+            clearSession = true;
+        }
+
+        if (clearSession) {
+            const authPath = require('path').join(process.cwd(), '.wwebjs_auth', 'session-rest-' + slug);
+            try { require('fs').rmSync(authPath, { recursive: true, force: true }); } catch (e) {}
+            console.log(`🗑️ [${slug}] Sessão anterior removida`);
         }
 
         const botState = {
@@ -50,7 +57,8 @@ class BotManager {
             authStrategy: new LocalAuth({ clientId: 'rest-' + slug }),
             puppeteer: {
                 headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
+                timeout: 120000
             }
         });
 
