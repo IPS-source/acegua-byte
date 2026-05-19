@@ -179,7 +179,7 @@ class BotManager {
                             await botEntry.client.sendMessage(destino,
                                 `✅ *TEU PEDIDO ESTÁ PRONTO!*\n\n` +
                                 (delivery
-                                    ? `🛵 O repórter já está saindo pra entrega!`
+                                    ? `🛵 O entregador já está saindo pra entrega!`
                                     : `🏪 Já pode passar pra retirar!`) +
                                 `\n\n⭐ *Obrigado por pedir no Aceguá Byte!*`);
                             console.log('✅ Notificado: Finalizado →', pedido.cliente);
