@@ -293,6 +293,14 @@
             if (cart.length === 0 || !whatsappNum) return alert('Carrinho vazio ou WhatsApp não configurado');
             checkoutData = { entrega: null, endereco: '', pagamento: null, troco: null, trocoValor: '' };
             currentStep = 1;
+            document.getElementById('input-endereco').value = '';
+            document.getElementById('input-troco').value = '';
+            document.querySelectorAll('.option-btn').forEach(el => el.classList.remove('selected'));
+            document.getElementById('troco-valor-div').style.display = 'none';
+            document.getElementById('btn-step1').disabled = true;
+            document.getElementById('btn-step2').disabled = true;
+            document.getElementById('btn-step3').disabled = true;
+            document.getElementById('btn-step4').disabled = true;
             showStep(1);
             document.getElementById('checkout-modal').classList.add('show');
         }
@@ -303,15 +311,17 @@
             currentStep = n;
 
             if (n === 2 && checkoutData.entrega !== 'delivery') {
-                // Delivery step, skip if retirada
-                nextStep();
+                showStep(3);
                 return;
             }
             if (n === 4 && checkoutData.pagamento !== 'efectivo') {
-                // Troco step, skip if not cash
                 nextStep();
                 return;
             }
+
+            if (n === 2) checkStep2();
+            if (n === 4) checkStep4();
+
             updateIndicator();
         }
 
@@ -348,9 +358,13 @@
                 else showStep(3);
                 return;
             }
-            if (currentStep === 4 || currentStep === 3) showStep(3);
-            else if (currentStep === 2) showStep(1);
-            else showStep(currentStep - 1);
+            if (currentStep === 4) { showStep(3); return; }
+            if (currentStep === 3) {
+                if (checkoutData.entrega === 'delivery') showStep(2);
+                else showStep(1);
+                return;
+            }
+            if (currentStep === 2) { showStep(1); return; }
         }
 
         function selectEntrega(tipo) {
@@ -362,7 +376,7 @@
 
         function checkStep2() {
             const val = document.getElementById('input-endereco').value.trim();
-            if (val.length >= 5) {
+            if (val.length >= 1) {
                 checkoutData.endereco = val;
                 document.getElementById('btn-step2').disabled = false;
             } else {
@@ -450,10 +464,6 @@
                 </div>`;
         }
 
-        function detectarSlug() {
-            const s = window.location.pathname.replace('/cardapio/', '').replace(/\/$/, '');
-            if (!s) { erroCardapio('URL inválida'); }
-        }
     </script>
 </body>
 </html>
